@@ -50,7 +50,14 @@ public class Clip {
         return pasteData;
     }
 
-    static String resolve( Uri uri )
+    static void setData( Context context, String data )
+    {
+        ClipboardManager clipboard = (ClipboardManager)context.getSystemService(Context.CLIPBOARD_SERVICE);
+        ClipData clip = ClipData.newPlainText("simple text", data );
+        clipboard.setPrimaryClip( clip );
+    }
+
+    private static String resolve( Uri uri )
     {
         Log.e( TAG, "resolve(" + uri + ") not doing anything" );
         return null;

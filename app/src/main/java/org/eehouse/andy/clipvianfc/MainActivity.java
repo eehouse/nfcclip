@@ -18,9 +18,7 @@
  */
 
 package org.eehouse.andy.clipvianfc;
-
 import androidx.appcompat.app.AppCompatActivity;
-
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
@@ -29,6 +27,8 @@ import android.widget.EditText;
 
 public class MainActivity extends AppCompatActivity implements View.OnClickListener {
     private final static String TAG = MainActivity.class.getSimpleName();
+
+    private String mClipData;
 
     @Override
     protected void onCreate(Bundle savedInstanceState)
@@ -42,11 +42,11 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     protected void onPostResume()
     {
         super.onPostResume();
-        String clipData = Clip.getData(this);
+        mClipData = Clip.getData(this);
 
         EditText et = (EditText)findViewById(R.id.clip_text);
-        et.setText(clipData);
-        findViewById(R.id.send).setEnabled( clipData != null && clipData.length() > 0 );
+        et.setText(mClipData);
+        findViewById(R.id.send).setEnabled( mClipData != null && mClipData.length() > 0 );
     }
 
     @Override
@@ -55,10 +55,10 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         int id = view.getId();
         switch ( id ) {
             case R.id.send:
-                Log.d( TAG, "send button pressed");
+                NFCUtils.sendClip( this, mClipData );
                 break;
             default:
-                assert (false);
+                assert false;
         }
     }
 }

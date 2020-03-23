@@ -1,5 +1,8 @@
 apply plugin: 'com.android.application'
 
+// AID must start with F (first 4 bits) and be from 5 to 16 bytes long
+def NFC_AID = "FD8A591453B4"
+
 android {
     compileSdkVersion 28
 
@@ -12,6 +15,9 @@ android {
         versionName "1.0"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+
+        buildConfigField "String", "NFC_AID", "\"${NFC_AID}\""
+        resValue "string", "nfc_aid", "$NFC_AID"
     }
 
     signingConfigs {
