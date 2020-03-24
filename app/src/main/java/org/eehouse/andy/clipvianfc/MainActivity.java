@@ -26,12 +26,15 @@ import android.text.method.ScrollingMovementMethod;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
-import android.widget.EditText;
+import android.widget.ProgressBar;
+import android.widget.TextView;
 
-public class MainActivity extends AppCompatActivity implements View.OnClickListener {
+/* TODO
+ */
+
+public class MainActivity extends AppCompatActivity implements View.OnClickListener, NFCUtils.Callbacks {
     private final static String TAG = MainActivity.class.getSimpleName();
 
-    private String mClipData;
     private ClipData.Item mClipData;
     private String[] mType = {null};
     private String[] mLabel = {null};
@@ -69,10 +72,46 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         int id = view.getId();
         switch ( id ) {
             case R.id.send:
-                NFCUtils.sendClip( this, mType[0], mLabel[0], mClipData );
+                NFCUtils.sendClip( this, this, mType[0], mLabel[0], mClipData );
                 break;
             default:
                 assert false;
         }
+    }
+
+    @Override
+    public void onSendEnabled()
+    {
+        showSending( true );
+    }
+
+    @Override
+    public void onSendComplete( boolean succeeded )
+    {
+        showSending( false );
+    }
+
+    @Override
+    public void onProgressMade( final int cur, final int max )
+    {
+        runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    ProgressBar pb = (ProgressBar)findViewById( R.id.progress );
+                    pb.setMax(max);
+                    pb.setProgress(cur);
+                }
+            } );
+    }
+
+    private void showSending( final boolean sending )
+    {
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                findViewById(R.id.send).setVisibility( sending ? View.GONE : View.VISIBLE );
+                findViewById(R.id.sending_status).setVisibility( !sending ? View.GONE : View.VISIBLE );
+            }
+        });
     }
 }

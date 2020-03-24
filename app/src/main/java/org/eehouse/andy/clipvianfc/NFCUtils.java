@@ -25,7 +25,6 @@ import android.nfc.NfcAdapter;
 import android.nfc.Tag;
 import android.nfc.tech.IsoDep;
 import android.util.Log;
-
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.DataInput;
@@ -33,6 +32,7 @@ import java.io.DataInputStream;
 import java.io.DataOutput;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.util.Arrays;
 
 class NFCUtils {
     private static final String TAG = NFCUtils.class.getSimpleName();
@@ -40,13 +40,44 @@ class NFCUtils {
     static private final int mFlags = NfcAdapter.FLAG_READER_NFC_A
         | NfcAdapter.FLAG_READER_SKIP_NDEF_CHECK;
     static final byte[] HEADER = { 0x00, (byte)0xA4, 0x04, 0x00 };
+    private static Reader[] sReader = {null};
 
-    static void sendClip(Activity activity, String mimeType, String label, ClipData.Item data )
+    public interface Callbacks {
+        void onSendEnabled();
+        void onSendComplete( boolean succeeded );
+        void onProgressMade( int cur, int max );
+    }
+
+    static void sendClip( Activity activity, final Callbacks callbacks,
+                          String mimeType, String label, ClipData.Item data )
     {
-        Reader reader = new Reader( activity, mimeType, label, data );
-        NfcAdapter
-            .getDefaultAdapter( activity )
-            .enableReaderMode( activity, reader, mFlags, null );
+        synchronized( sReader ) {
+            if ( null == sReader[0] ) {
+                callbacks.onSendEnabled();
+
+                final Reader reader = new Reader( activity, callbacks, mimeType, label, data );
+                sReader[0] = reader;
+                NfcAdapter
+                    .getDefaultAdapter( activity )
+                    .enableReaderMode( activity, sReader[0], mFlags, null );
+                new Thread( new Runnable() {
+                        @Override
+                        public void run() {
+                            for ( int ii = 0; ii < 10; ++ii ) {
+                                callbacks.onProgressMade( ii, 10 );
+                                try {
+                                    Thread.sleep(1 * 1000);
+                                } catch ( InterruptedException ie ) {
+                                }
+                                if ( reader.stopped() ) {
+                                    break;
+                                }
+                            }
+                            reader.stop();
+                        }
+                    }).start();
+            }
+        }
     }
 
     private static class Reader implements NfcAdapter.ReaderCallback {
@@ -55,10 +86,14 @@ class NFCUtils {
         private String mLabel;
         private ClipData.Item mData;
         private NfcAdapter mAdapter;
+        private boolean mSendSucceeded = false;
+        private Callbacks mCallbacks;
 
-        private Reader( Activity activity, String mimeType, String label, ClipData.Item data )
+        private Reader( Activity activity, Callbacks callbacks, String mimeType, String label,
+                        ClipData.Item data )
         {
             mActivity = activity;
+            mCallbacks = callbacks;
             mType = mimeType;
             mLabel = label;
             mData = data;
@@ -90,15 +125,35 @@ class NFCUtils {
                 assert msg.length < maxLen || !BuildConfig.DEBUG;
                 Log.d( TAG, "sent " + msg.length + " bytes" );
                 byte[] response = isoDep.transceive( msg );
+                mSendSucceeded = Arrays.equals( response, NFCCardService.STATUS_SUCCESS );
 
                 isoDep.close();
+
+                stop();
             } catch ( IOException ioe ) {
                 Log.e( TAG, "got ioe: " + ioe.getMessage() );
             }
 
-        NfcAdapter
-            .getDefaultAdapter( mActivity )
-            .disableReaderMode( mActivity );
+        }
+
+        void stop()
+        {
+            synchronized( sReader ) {
+                if ( this == sReader[0] ) {
+                    NfcAdapter
+                        .getDefaultAdapter( mActivity )
+                        .disableReaderMode( mActivity );
+                    mCallbacks.onSendComplete( mSendSucceeded );
+                    sReader[0] = null;
+                }
+            }
+        }
+
+        boolean stopped()
+        {
+            synchronized ( sReader ) {
+                return sReader[0] != this;
+            }
         }
     }
 

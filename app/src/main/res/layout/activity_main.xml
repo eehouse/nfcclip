@@ -6,6 +6,7 @@
               android:layout_width="match_parent"
               android:layout_height="match_parent"
               tools:context=".MainActivity"
+              android:padding="8dp"
               >
 
   <TextView android:layout_height="wrap_content"
@@ -14,25 +15,53 @@
             android:text="@string/label_clip_text"
             android:layout_gravity="center_horizontal"
             />
-  <TextView android:id="@+id/clip_type"
-            android:layout_width="fill_parent"
-            android:layout_height="wrap_content"
-            />
-  <TextView android:id="@+id/clip_label"
-            android:layout_width="fill_parent"
-            android:layout_height="wrap_content"
-            />
-  <TextView android:id="@+id/clip_text"
-            android:layout_width="fill_parent"
-            android:layout_height="wrap_content"
-            android:scrollbars="vertical"
-            android:maxLines="10"
-            />
+  <LinearLayout android:orientation="vertical"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="#F0F0F0"
+                >
+    <TextView android:id="@+id/clip_type"
+              android:layout_width="fill_parent"
+              android:layout_height="wrap_content"
+              />
+    <TextView android:id="@+id/clip_label"
+              android:layout_width="fill_parent"
+              android:layout_height="wrap_content"
+              />
+    <TextView android:id="@+id/clip_text"
+              android:layout_width="fill_parent"
+              android:layout_height="wrap_content"
+              android:scrollbars="vertical"
+              android:maxLines="10"
+              />
+  </LinearLayout>
   <Button android:id="@+id/send"
           android:layout_width="wrap_content"
           android:layout_height="wrap_content"
           android:text="@string/send"
           android:layout_gravity="center_horizontal"
           />
+  <LinearLayout android:id="@+id/sending_status"
+                android:visibility="gone"
+                android:orientation="vertical"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:paddingLeft="10dp"
+                android:paddingRight="10dp"
+                >
+    <TextView android:layout_height="wrap_content"
+              android:layout_width="fill_parent"
+              android:textAppearance="?android:attr/textAppearanceMedium"
+              android:text="@string/sending_status"
+              android:layout_gravity="center_horizontal"
+              />
 
+    <ProgressBar android:id="@+id/progress"
+                 style="@android:style/Widget.ProgressBar.Horizontal"
+                 android:layout_width="match_parent"
+                 android:layout_height="wrap_content"
+                 android:progress="0"
+                 android:max="10"
+                 />
+  </LinearLayout>
 </LinearLayout>

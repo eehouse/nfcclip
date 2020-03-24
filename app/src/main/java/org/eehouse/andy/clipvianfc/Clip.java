@@ -59,7 +59,7 @@ public class Clip {
         ClipboardManager clipboard = (ClipboardManager)context.getSystemService(Context.CLIPBOARD_SERVICE);
         ClipData clip = ClipData.newPlainText( label, data );
         clipboard.setPrimaryClip( clip );
-
+    }
 
     private static String resolve( Uri uri )
     {

@@ -30,7 +30,7 @@ public class NFCCardService extends HostApduService {
     private static final String TAG = NFCCardService.class.getSimpleName();
 
     private static final byte[] STATUS_FAILED = { 0x6F, 0x00, };
-    private static final byte[] STATUS_SUCCESS = { (byte)0x90, 0x00, };
+    static final byte[] STATUS_SUCCESS = { (byte)0x90, 0x00, };
 
     @Override
     public byte[] processCommandApdu( byte[] apdu, Bundle extras )
