@@ -60,8 +60,10 @@ public class NFCCardService extends HostApduService {
                     throw new Exception("bad version codes: " + minVers + ", " + maxVers);
                 }
 
+                String mimeType = NFCUtils.read( bais );
+                String label = NFCUtils.read( bais );
                 String data = NFCUtils.read( bais );
-                Clip.setData( this, data );
+                Clip.setData( this, mimeType, label, data );
 
                 result = STATUS_SUCCESS;
             } catch ( Exception ex ) {

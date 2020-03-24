@@ -4,4 +4,6 @@
   <string name="label_clip_text">Clipboard contents</string>
   <string name="send">Send</string>
   <string name="servicedesc">For transmitting clipboard contents via NFC</string>
+  <string name="typeLabel">Mime type: %1$s</string>
+  <string name="labelLabel">Label: %1$s</string>
 </resources>

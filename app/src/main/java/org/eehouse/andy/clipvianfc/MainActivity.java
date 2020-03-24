@@ -19,7 +19,10 @@
 
 package org.eehouse.andy.clipvianfc;
 import androidx.appcompat.app.AppCompatActivity;
+
+import android.content.ClipData;
 import android.os.Bundle;
+import android.text.method.ScrollingMovementMethod;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
@@ -29,6 +32,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private final static String TAG = MainActivity.class.getSimpleName();
 
     private String mClipData;
+    private ClipData.Item mClipData;
+    private String[] mType = {null};
+    private String[] mLabel = {null};
 
     @Override
     protected void onCreate(Bundle savedInstanceState)
@@ -36,17 +42,25 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         findViewById(R.id.send).setOnClickListener( this );
+
+        ((TextView)findViewById(R.id.clip_text)).setMovementMethod(new ScrollingMovementMethod());
     }
 
     @Override
     protected void onPostResume()
     {
         super.onPostResume();
-        mClipData = Clip.getData(this);
+        mClipData = Clip.getData( this, mType, mLabel );
 
-        EditText et = (EditText)findViewById(R.id.clip_text);
-        et.setText(mClipData);
-        findViewById(R.id.send).setEnabled( mClipData != null && mClipData.length() > 0 );
+        TextView tv = (TextView)findViewById(R.id.clip_label);
+        tv.setText( getString( R.string.labelLabel, mLabel[0] ) );
+        tv = (TextView)findViewById(R.id.clip_type);
+        tv.setText( getString( R.string.typeLabel, mType[0] ) );
+
+        tv = (TextView)findViewById(R.id.clip_text);
+        tv.setText( mClipData.coerceToHtmlText(this) );
+
+        findViewById(R.id.send).setEnabled( mClipData != null );
     }
 
     @Override
@@ -55,7 +69,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         int id = view.getId();
         switch ( id ) {
             case R.id.send:
-                NFCUtils.sendClip( this, mClipData );
+                NFCUtils.sendClip( this, mType[0], mLabel[0], mClipData );
                 break;
             default:
                 assert false;

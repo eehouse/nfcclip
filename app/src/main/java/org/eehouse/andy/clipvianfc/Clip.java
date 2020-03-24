@@ -20,6 +20,7 @@
 package org.eehouse.andy.clipvianfc;
 
 import android.content.ClipData;
+import android.content.ClipDescription;
 import android.content.ClipboardManager;
 import android.content.Context;
 import android.net.Uri;
@@ -30,32 +31,35 @@ import static android.content.ClipDescription.MIMETYPE_TEXT_PLAIN;
 public class Clip {
     private final static String TAG = Clip.class.getSimpleName();
 
-    static String getData( Context context )
+    static ClipData.Item getData( Context context, String[] mimeTypeOut, String[] labelOut )
     {
-        String pasteData = null;
+        ClipData.Item pasteData = null;
         ClipboardManager clipboard = (ClipboardManager) context.getSystemService(Context.CLIPBOARD_SERVICE);
-        if ( clipboard.hasPrimaryClip()
-             && clipboard.getPrimaryClipDescription().hasMimeType(MIMETYPE_TEXT_PLAIN) ) {
-
-             ClipData.Item item = clipboard.getPrimaryClip().getItemAt(0);
-             pasteData = item.getText().toString();
-
-             if ( null == pasteData ) {
-                 Uri pasteUri = item.getUri();
-                 if ( null != pasteUri ) {
-                     pasteData = resolve( pasteUri );
-                 }
-             }
+        if ( clipboard.hasPrimaryClip() ) {
+            ClipDescription desc = clipboard.getPrimaryClipDescription();
+            int count = desc.getMimeTypeCount();
+            for ( int ii = 0; ii < count; ++ii ) {
+                String typ = desc.getMimeType( ii );
+                Log.d( TAG, "got type " + ii + ": " + typ);
+                if ( typ.startsWith("text/")) {
+                    pasteData = clipboard.getPrimaryClip().getItemAt(0);
+                    mimeTypeOut[0] = typ;
+                    CharSequence label = desc.getLabel();
+                    labelOut[0] = label == null ? null : label.toString();
+                    break;
+                }
+            }
         }
+        Log.d( TAG, "getData() => " + pasteData);
         return pasteData;
     }
 
-    static void setData( Context context, String data )
+    static void setData( Context context, String mimeType, String label, String data )
     {
         ClipboardManager clipboard = (ClipboardManager)context.getSystemService(Context.CLIPBOARD_SERVICE);
-        ClipData clip = ClipData.newPlainText("simple text", data );
+        ClipData clip = ClipData.newPlainText( label, data );
         clipboard.setPrimaryClip( clip );
-    }
+
 
     private static String resolve( Uri uri )
     {

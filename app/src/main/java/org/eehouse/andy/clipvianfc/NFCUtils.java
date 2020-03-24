@@ -20,6 +20,7 @@
 package org.eehouse.andy.clipvianfc;
 
 import android.app.Activity;
+import android.content.ClipData;
 import android.nfc.NfcAdapter;
 import android.nfc.Tag;
 import android.nfc.tech.IsoDep;
@@ -40,9 +41,9 @@ class NFCUtils {
         | NfcAdapter.FLAG_READER_SKIP_NDEF_CHECK;
     static final byte[] HEADER = { 0x00, (byte)0xA4, 0x04, 0x00 };
 
-    static void sendClip(Activity activity, String data )
+    static void sendClip(Activity activity, String mimeType, String label, ClipData.Item data )
     {
-        Reader reader = new Reader( activity, data );
+        Reader reader = new Reader( activity, mimeType, label, data );
         NfcAdapter
             .getDefaultAdapter( activity )
             .enableReaderMode( activity, reader, mFlags, null );
@@ -50,12 +51,16 @@ class NFCUtils {
 
     private static class Reader implements NfcAdapter.ReaderCallback {
         private Activity mActivity;
-        private String mData;
+        private String mType;
+        private String mLabel;
+        private ClipData.Item mData;
         private NfcAdapter mAdapter;
 
-        private Reader( Activity activity, String data )
+        private Reader( Activity activity, String mimeType, String label, ClipData.Item data )
         {
             mActivity = activity;
+            mType = mimeType;
+            mLabel = label;
             mData = data;
         }
 
@@ -77,7 +82,9 @@ class NFCUtils {
                 baos.write( VERSION_1 ); // max
 
                 // Let's try writing the data too
-                write( baos, mData );
+                write( baos, mType );
+                write( baos, mLabel );
+                write( baos, mData.coerceToHtmlText(mActivity) );
 
                 byte[] msg = baos.toByteArray();
                 assert msg.length < maxLen || !BuildConfig.DEBUG;
