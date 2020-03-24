@@ -67,25 +67,17 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         super.onPostResume();
         if ( mHaveNFC ) {
             showHideDisabled();
+        }
+    }
 
-            mClipData = Clip.getData( this, mType, mLabel );
-
-            TextView tv = (TextView)findViewById(R.id.clip_label);
-            if ( null == mLabel[0] ) {
-                tv.setVisibility( View.GONE );
-            } else {
-                tv.setVisibility( View.VISIBLE );
-                tv.setText( getString( R.string.labelLabel, mLabel[0] ) );
-            }
-            tv = (TextView)findViewById(R.id.clip_type);
-            tv.setText( getString( R.string.typeLabel, mType[0] ) );
-
-            if (null != mClipData) {
-                tv = (TextView) findViewById(R.id.clip_text);
-                tv.setText(mClipData.coerceToHtmlText(this));
-            }
-
-            findViewById(R.id.send).setEnabled( mClipData != null );
+    // On Android 10 you can't get at the clipboard unless you are the
+    // in-focus app. So that's where we'll check for contents.
+    @Override
+    public void onWindowFocusChanged( boolean hasFocus )
+    {
+        super.onWindowFocusChanged(hasFocus);
+        if ( hasFocus ) {
+            getClipData();
         }
     }
 
@@ -102,12 +94,34 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             break;
         case R.id.enable:
             Intent intent = new Intent( Settings.ACTION_NFC_SETTINGS )
-                .addFlags( Intent.FLAG_ACTIVITY_CLEAR_WHEN_TASK_RESET );
-            startActivity(intent);
+                .addFlags( Intent.FLAG_ACTIVITY_NEW_DOCUMENT );
+            startActivity( intent );
             break;
         default:
             assert false;
         }
+    }
+
+    private void getClipData()
+    {
+        mClipData = Clip.getData( this, mType, mLabel );
+
+        TextView tv = (TextView)findViewById(R.id.clip_label);
+        if ( null == mLabel[0] ) {
+            tv.setVisibility( View.GONE );
+        } else {
+            tv.setVisibility( View.VISIBLE );
+            tv.setText( getString( R.string.labelLabel, mLabel[0] ) );
+        }
+        tv = (TextView)findViewById(R.id.clip_type);
+        tv.setText( getString( R.string.typeLabel, mType[0] ) );
+
+        if (null != mClipData) {
+            tv = (TextView) findViewById(R.id.clip_text);
+            tv.setText(mClipData.coerceToHtmlText(this));
+        }
+
+        findViewById(R.id.send).setEnabled( mClipData != null );
     }
 
     private void uninstall()
