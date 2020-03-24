@@ -7,4 +7,7 @@
   <string name="typeLabel">Mime type: %1$s</string>
   <string name="labelLabel">Label: %1$s</string>
   <string name="sending_status">Sending… Tap against receiving device now!</string>
+
+  <string name="no_nfc_expl">NFC is not supported on this device. You might as well uninstall now.</string>
+  <string name="uninstall">Uninstall</string>
 </resources>

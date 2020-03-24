@@ -3,6 +3,7 @@
           package="org.eehouse.andy.clipvianfc">
 
   <uses-permission android:name="android.permission.NFC" />
+  <uses-permission android:name="android.permission.REQUEST_DELETE_PACKAGES" />
   <uses-feature android:name="android.hardware.nfc.hce" android:required="true" />
 
   <application

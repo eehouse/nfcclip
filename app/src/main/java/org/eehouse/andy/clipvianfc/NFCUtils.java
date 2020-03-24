@@ -21,6 +21,7 @@ package org.eehouse.andy.clipvianfc;
 
 import android.app.Activity;
 import android.content.ClipData;
+import android.content.Context;
 import android.nfc.NfcAdapter;
 import android.nfc.Tag;
 import android.nfc.tech.IsoDep;
@@ -46,6 +47,20 @@ class NFCUtils {
         void onSendEnabled();
         void onSendComplete( boolean succeeded );
         void onProgressMade( int cur, int max );
+    }
+
+    public static boolean deviceSupportsNFC(Context context)
+    {
+        NfcAdapter adapter = NfcAdapter.getDefaultAdapter(context);
+        boolean result = null != adapter;
+        Log.d( TAG, "deviceSupportsNFC() => " + result );
+        return result;
+    }
+
+    public static boolean nfcEnabled( Context context )
+    {
+        NfcAdapter adapter = NfcAdapter.getDefaultAdapter(context);
+        return null != adapter && adapter.isEnabled();
     }
 
     static void sendClip( Activity activity, final Callbacks callbacks,

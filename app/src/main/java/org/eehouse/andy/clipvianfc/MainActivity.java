@@ -21,6 +21,8 @@ package org.eehouse.andy.clipvianfc;
 import androidx.appcompat.app.AppCompatActivity;
 
 import android.content.ClipData;
+import android.content.Intent;
+import android.net.Uri;
 import android.os.Bundle;
 import android.text.method.ScrollingMovementMethod;
 import android.util.Log;
@@ -38,32 +40,59 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private ClipData.Item mClipData;
     private String[] mType = {null};
     private String[] mLabel = {null};
+    private boolean mHaveNFC;
 
     @Override
     protected void onCreate(Bundle savedInstanceState)
     {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
-        findViewById(R.id.send).setOnClickListener( this );
 
-        ((TextView)findViewById(R.id.clip_text)).setMovementMethod(new ScrollingMovementMethod());
+        mHaveNFC = NFCUtils.deviceSupportsNFC( this );
+        if ( !mHaveNFC ) {
+            setContentView( R.layout.activity_no_nfc );
+            findViewById(R.id.uninstall).setOnClickListener( this );
+        } else {
+            setContentView(R.layout.activity_main);
+            ((TextView)findViewById(R.id.clip_text)).setMovementMethod(new ScrollingMovementMethod());
+            findViewById(R.id.send).setOnClickListener( this );
+
+            if ( !NFCUtils.nfcEnabled( this ) ) {
+                showNotEnabled();
+            } else {
+                showNormal();
+            }
+        }
+    }
+
+    private void showNotEnabled()
+    {
+        // pending
+    }
+
+    private void showNormal()
+    {
+        // pending
     }
 
     @Override
     protected void onPostResume()
     {
         super.onPostResume();
-        mClipData = Clip.getData( this, mType, mLabel );
+        if ( mHaveNFC ) {
+            mClipData = Clip.getData( this, mType, mLabel );
 
-        TextView tv = (TextView)findViewById(R.id.clip_label);
-        tv.setText( getString( R.string.labelLabel, mLabel[0] ) );
-        tv = (TextView)findViewById(R.id.clip_type);
-        tv.setText( getString( R.string.typeLabel, mType[0] ) );
+            TextView tv = (TextView)findViewById(R.id.clip_label);
+            tv.setText( getString( R.string.labelLabel, mLabel[0] ) );
+            tv = (TextView)findViewById(R.id.clip_type);
+            tv.setText( getString( R.string.typeLabel, mType[0] ) );
 
-        tv = (TextView)findViewById(R.id.clip_text);
-        tv.setText( mClipData.coerceToHtmlText(this) );
+            if (null != mClipData) {
+                tv = (TextView) findViewById(R.id.clip_text);
+                tv.setText(mClipData.coerceToHtmlText(this));
+            }
 
-        findViewById(R.id.send).setEnabled( mClipData != null );
+            findViewById(R.id.send).setEnabled( mClipData != null );
+        }
     }
 
     @Override
@@ -71,12 +100,24 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     {
         int id = view.getId();
         switch ( id ) {
-            case R.id.send:
-                NFCUtils.sendClip( this, this, mType[0], mLabel[0], mClipData );
-                break;
-            default:
-                assert false;
+        case R.id.send:
+            NFCUtils.sendClip( this, this, mType[0], mLabel[0], mClipData );
+            break;
+        case R.id.uninstall:
+            uninstall();
+            break;
+        default:
+            assert false;
         }
+    }
+
+    private void uninstall()
+    {
+        Intent intent = new Intent(Intent.ACTION_DELETE)
+            .setData(Uri.parse("package:" + BuildConfig.APPLICATION_ID ) )
+            .putExtra( "android.intent.extra.UNINSTALL_ALL_USERS", true);
+        startActivity( intent );
+        finish();
     }
 
     @Override
