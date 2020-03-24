@@ -9,6 +9,25 @@
               android:padding="8dp"
               >
 
+  <LinearLayout android:id="@+id/disabled_expl"
+                android:orientation="vertical"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:visibility="gone"
+                >
+    <TextView android:layout_height="wrap_content"
+              android:layout_width="fill_parent"
+              android:textAppearance="?android:attr/textAppearanceMedium"
+              android:text="@string/must_enable_expl"
+              />
+    <Button android:id="@+id/enable"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/enable"
+            android:layout_gravity="center_horizontal"
+            />
+  </LinearLayout>
+
   <TextView android:layout_height="wrap_content"
             android:layout_width="fill_parent"
             android:textAppearance="?android:attr/textAppearanceMedium"

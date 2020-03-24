@@ -18,12 +18,14 @@
  */
 
 package org.eehouse.andy.clipvianfc;
+
 import androidx.appcompat.app.AppCompatActivity;
 
 import android.content.ClipData;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
+import android.provider.Settings;
 import android.text.method.ScrollingMovementMethod;
 import android.util.Log;
 import android.view.View;
@@ -55,23 +57,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             setContentView(R.layout.activity_main);
             ((TextView)findViewById(R.id.clip_text)).setMovementMethod(new ScrollingMovementMethod());
             findViewById(R.id.send).setOnClickListener( this );
-
-            if ( !NFCUtils.nfcEnabled( this ) ) {
-                showNotEnabled();
-            } else {
-                showNormal();
-            }
+            findViewById(R.id.enable).setOnClickListener( this );
         }
-    }
-
-    private void showNotEnabled()
-    {
-        // pending
-    }
-
-    private void showNormal()
-    {
-        // pending
     }
 
     @Override
@@ -79,10 +66,17 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     {
         super.onPostResume();
         if ( mHaveNFC ) {
+            showHideDisabled();
+
             mClipData = Clip.getData( this, mType, mLabel );
 
             TextView tv = (TextView)findViewById(R.id.clip_label);
-            tv.setText( getString( R.string.labelLabel, mLabel[0] ) );
+            if ( null == mLabel[0] ) {
+                tv.setVisibility( View.GONE );
+            } else {
+                tv.setVisibility( View.VISIBLE );
+                tv.setText( getString( R.string.labelLabel, mLabel[0] ) );
+            }
             tv = (TextView)findViewById(R.id.clip_type);
             tv.setText( getString( R.string.typeLabel, mType[0] ) );
 
@@ -106,6 +100,11 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         case R.id.uninstall:
             uninstall();
             break;
+        case R.id.enable:
+            Intent intent = new Intent( Settings.ACTION_NFC_SETTINGS )
+                .addFlags( Intent.FLAG_ACTIVITY_CLEAR_WHEN_TASK_RESET );
+            startActivity(intent);
+            break;
         default:
             assert false;
         }
@@ -118,6 +117,13 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             .putExtra( "android.intent.extra.UNINSTALL_ALL_USERS", true);
         startActivity( intent );
         finish();
+    }
+
+    private void showHideDisabled()
+    {
+        boolean enabled = NFCUtils.nfcEnabled( this );
+        findViewById(R.id.disabled_expl).setVisibility( enabled ? View.GONE : View.VISIBLE );
+        findViewById(R.id.send).setVisibility( !enabled ? View.GONE : View.VISIBLE );
     }
 
     @Override

@@ -1,7 +1,7 @@
 <resources>
   <string name="app_name">NFCCopyPaste</string>
 
-  <string name="label_clip_text">Clipboard contents</string>
+  <string name="label_clip_text">Clipboard contents (available to send)</string>
   <string name="send">Start Sending</string>
   <string name="servicedesc">For transmitting clipboard contents via NFC</string>
   <string name="typeLabel">Mime type: %1$s</string>
@@ -10,4 +10,9 @@
 
   <string name="no_nfc_expl">NFC is not supported on this device. You might as well uninstall now.</string>
   <string name="uninstall">Uninstall</string>
+
+  <string name="must_enable_expl">NFC is available on your phone but
+  is disabled in Settings. You need to enable it in order to send or
+  receive anything.</string>
+  <string name="enable">Enable NFC</string>
 </resources>
