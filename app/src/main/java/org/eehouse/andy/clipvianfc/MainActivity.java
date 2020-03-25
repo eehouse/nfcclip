@@ -22,6 +22,8 @@ package org.eehouse.andy.clipvianfc;
 import androidx.appcompat.app.AppCompatActivity;
 
 import android.content.ClipData;
+import android.content.ClipboardManager;
+import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
@@ -36,7 +38,9 @@ import android.widget.TextView;
 /* TODO
  */
 
-public class MainActivity extends AppCompatActivity implements View.OnClickListener, NFCUtils.Callbacks {
+public class MainActivity extends AppCompatActivity implements View.OnClickListener,
+                                                               ClipboardManager.OnPrimaryClipChangedListener,
+                                                               NFCUtils.Callbacks {
     private final static String TAG = MainActivity.class.getSimpleName();
 
     private ClipData.Item mClipData;
@@ -58,6 +62,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             ((TextView)findViewById(R.id.clip_text)).setMovementMethod(new ScrollingMovementMethod());
             findViewById(R.id.send).setOnClickListener( this );
             findViewById(R.id.enable).setOnClickListener( this );
+
+            ((ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE))
+                .addPrimaryClipChangedListener( this );
         }
     }
 
@@ -138,6 +145,12 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         boolean enabled = NFCUtils.nfcEnabled( this );
         findViewById(R.id.disabled_expl).setVisibility( enabled ? View.GONE : View.VISIBLE );
         findViewById(R.id.send).setVisibility( !enabled ? View.GONE : View.VISIBLE );
+    }
+
+    @Override
+    public void onPrimaryClipChanged()
+    {
+        getClipData();
     }
 
     @Override

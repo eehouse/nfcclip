@@ -53,14 +53,15 @@ class NFCUtils {
     {
         NfcAdapter adapter = NfcAdapter.getDefaultAdapter(context);
         boolean result = null != adapter;
-        Log.d( TAG, "deviceSupportsNFC() => " + result );
         return result;
     }
 
     public static boolean nfcEnabled( Context context )
     {
         NfcAdapter adapter = NfcAdapter.getDefaultAdapter(context);
-        return null != adapter && adapter.isEnabled();
+        boolean result = null != adapter && adapter.isEnabled();
+        // Log.d( TAG, "nfcEnabled() => " + result );
+        return result;
     }
 
     static void sendClip( Activity activity, final Callbacks callbacks,
@@ -132,14 +133,16 @@ class NFCUtils {
                 baos.write( VERSION_1 ); // max
 
                 // Let's try writing the data too
-                write( baos, mType );
-                write( baos, mLabel );
+                write( baos, null == mType ? "" : mType );
+                write( baos, null == mLabel ? "" : mLabel );
                 write( baos, mData.coerceToHtmlText(mActivity) );
 
                 byte[] msg = baos.toByteArray();
                 assert msg.length < maxLen || !BuildConfig.DEBUG;
                 Log.d( TAG, "sent " + msg.length + " bytes" );
                 byte[] response = isoDep.transceive( msg );
+                Log.d( TAG, "transceive() => " + hexDump( response ) );
+
                 mSendSucceeded = Arrays.equals( response, NFCCardService.STATUS_SUCCESS );
 
                 isoDep.close();
