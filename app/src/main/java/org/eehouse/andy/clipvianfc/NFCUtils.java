@@ -121,7 +121,7 @@ class NFCUtils {
             IsoDep isoDep = IsoDep.get( tag );
             try {
                 isoDep.connect();
-                int maxLen = isoDep.getMaxTransceiveLength();
+                final int maxLen = isoDep.getMaxTransceiveLength();
                 Log.d( TAG, "onTagDiscovered() connected; max len: " + maxLen );
 
                 byte[] aidBytes = hexStr2ba( BuildConfig.NFC_AID );
@@ -138,12 +138,21 @@ class NFCUtils {
                 write( baos, mData.coerceToHtmlText(mActivity) );
 
                 byte[] msg = baos.toByteArray();
-                assert msg.length < maxLen || !BuildConfig.DEBUG;
-                Log.d( TAG, "sent " + msg.length + " bytes" );
-                byte[] response = isoDep.transceive( msg );
-                Log.d( TAG, "transceive() => " + hexDump( response ) );
 
-                mSendSucceeded = Arrays.equals( response, NFCCardService.STATUS_SUCCESS );
+                for ( int offset = 0; offset < msg.length; ) {
+                    int thisLen = Math.min( maxLen, msg.length - offset );
+                    byte[] subarray = Arrays.copyOfRange( msg, offset, offset + thisLen );
+                    offset += thisLen;
+
+                    byte[] response = isoDep.transceive( subarray );
+                    Log.d( TAG, "transceive(" + subarray.length + "/" + msg.length
+                           + " bytes) => " + hexDump( response ) );
+                    mSendSucceeded = Arrays.equals( response, NFCCardService.STATUS_SUCCESS );
+                    if ( !mSendSucceeded ) {
+                        Log.e( TAG, "onTagDiscovered(): problem; exiting send loop" );
+                        break;
+                    }
+                }
 
                 isoDep.close();
 
