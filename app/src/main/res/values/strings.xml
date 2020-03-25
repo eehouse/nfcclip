@@ -15,4 +15,8 @@
   is disabled in Settings. You need to enable it in order to send or
   receive anything.</string>
   <string name="enable">Enable NFC</string>
+
+  <string name="channel_desc">General notifications</string>
+  <string name="notify_receipt_title">Clipboard received</string>
+  <string name="notify_receipt_body_fmt">New text: %1$s…</string>
 </resources>

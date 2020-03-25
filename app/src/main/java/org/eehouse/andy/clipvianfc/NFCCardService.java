@@ -1,4 +1,4 @@
-/* -*- compile-command: "find-and-gradle.sh inXw4dDeb"; -*- */
+/* -*- compile-command: "find-and-gradle.sh inDeb"; -*- */
 /*
  * Copyright 2020 by Eric House (xwords@eehouse.org).  All rights reserved.
  *
@@ -114,6 +114,7 @@ public class NFCCardService extends HostApduService {
                 String label = NFCUtils.read( bais );
                 String data = NFCUtils.read( bais );
                 Clip.setData( this, mimeType, label, data );
+                Notify.post( this, data );
             } catch ( IOException ioe ) {
                 Log.e( TAG, "processBuffer(): exception: " + ioe );
             }

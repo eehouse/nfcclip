@@ -1,4 +1,4 @@
-/* -*- compile-command: "find-and-gradle.sh inXw4dDeb"; -*- */
+/* -*- compile-command: "find-and-gradle.sh inDeb"; -*- */
 /*
  * Copyright 2020 by Eric House (xwords@eehouse.org).  All rights reserved.
  *
@@ -18,7 +18,6 @@
  */
 
 package org.eehouse.andy.clipvianfc;
-
 import androidx.appcompat.app.AppCompatActivity;
 
 import android.content.ClipData;
@@ -187,5 +186,13 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 findViewById(R.id.sending_status).setVisibility( !sending ? View.GONE : View.VISIBLE );
             }
         });
+    }
+
+    static Intent getSelfIntent( Context context )
+    {
+        Intent intent = new Intent( context, MainActivity.class )
+            .setFlags( Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP )
+            ;
+        return intent;
     }
 }
