@@ -26,6 +26,7 @@ import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
+import android.os.Build;
 
 import androidx.core.app.NotificationCompat;
 
@@ -61,11 +62,14 @@ class Notify {
         String name = String.format( "NOTIFY_%x", R.string.channel_desc );
         NotificationChannel channel = nm.getNotificationChannel( name );
         if ( channel == null ) {
-            String channelDesc = context.getString( R.string.channel_desc );
-            channel = new NotificationChannel( name, channelDesc, 
+            if ( Build.VERSION.SDK_INT >= Build.VERSION_CODES.O ) {
+                String channelDesc = context.getString( R.string.channel_desc );
+
+                channel = new NotificationChannel( name, channelDesc,
                                                NotificationManager.IMPORTANCE_LOW );
-            channel.enableVibration( true );
-            nm.createNotificationChannel( channel );
+                channel.enableVibration( true );
+                nm.createNotificationChannel( channel );
+            }
         }
         return name;
     }
