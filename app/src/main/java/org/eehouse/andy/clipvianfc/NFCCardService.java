@@ -40,10 +40,10 @@ public class NFCCardService extends HostApduService {
     public byte[] processCommandApdu( byte[] apdu, Bundle extras )
     {
         byte[] result = STATUS_FAILED;
-        Log.d( TAG, "processCommandApdu() called; received " + apdu.length + " bytes: " );
-        Log.d( TAG, NFCUtils.hexDump( apdu ) );
 
         if ( null != apdu ) {
+            Log.d( TAG, "processCommandApdu(): received " + apdu.length + " bytes" );
+            // Log.d( TAG, NFCUtils.hexDump( apdu ) );
             try {
                 if ( null == mBuffer ) {
                     ByteArrayInputStream bais = new ByteArrayInputStream( apdu );
@@ -80,6 +80,8 @@ public class NFCCardService extends HostApduService {
             } catch ( Exception ex ) {
                 Log.e( TAG, "exception: " + ex );
             }
+        } else {
+            Log.e( TAG, "processCommandApdu(): apdu null!" );
         }
 
         return result;
@@ -106,19 +108,25 @@ public class NFCCardService extends HostApduService {
     {
         Log.d( TAG, "processBuffer()" );
         if ( null != mBuffer ) {
-            Log.d( TAG, "processing " + mBuffer.size() + " bytes" );
+            byte[] buffer = mBuffer.toByteArray();
+            mBuffer = null;
+            Log.d( TAG, "processing " + buffer.length + " bytes" );
             try {
-                ByteArrayInputStream bais = new ByteArrayInputStream( mBuffer.toByteArray() );
+                ByteArrayInputStream bais = new ByteArrayInputStream( buffer );
 
-                String mimeType = NFCUtils.read( bais );
-                String label = NFCUtils.read( bais );
-                String data = NFCUtils.read( bais );
-                Clip.setData( this, mimeType, label, data );
-                Notify.post( this, data );
+                int len = NFCUtils.readInt( bais );
+                if ( len != bais.available() ) {
+                    Log.e( TAG, "len bad: have " + bais.available() + " but expect " + len );
+                } else {
+                    String mimeType = NFCUtils.readString( bais );
+                    String label = NFCUtils.readString( bais );
+                    String data = NFCUtils.readString( bais );
+                    Clip.setData( this, mimeType, label, data );
+                    Notify.post( this, data );
+                }
             } catch ( IOException ioe ) {
                 Log.e( TAG, "processBuffer(): exception: " + ioe );
             }
-            mBuffer = null;
         } else {
             Log.e( TAG, "processBuffer(): nothing to process" );
         }

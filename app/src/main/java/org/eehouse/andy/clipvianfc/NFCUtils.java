@@ -37,6 +37,12 @@ import java.util.Arrays;
 
 class NFCUtils {
     private static final String TAG = NFCUtils.class.getSimpleName();
+
+    // On some devices getMaxTransceiveLength() reports a large number that
+    // transceive() can't in fact deliver. We'll force a smaller number to be
+    // safe.
+    private static final int MY_MAX = 1024;
+
     static final byte VERSION_1 = (byte)0x01;
     static private final int mFlags = NfcAdapter.FLAG_READER_NFC_A
         | NfcAdapter.FLAG_READER_SKIP_NDEF_CHECK;
@@ -121,7 +127,10 @@ class NFCUtils {
             IsoDep isoDep = IsoDep.get( tag );
             try {
                 isoDep.connect();
-                final int maxLen = isoDep.getMaxTransceiveLength();
+                int maxLen = isoDep.getMaxTransceiveLength();
+                if ( MY_MAX < maxLen ) {
+                    maxLen = MY_MAX;
+                }
                 Log.d( TAG, "onTagDiscovered() connected; max len: " + maxLen );
 
                 byte[] aidBytes = hexStr2ba( BuildConfig.NFC_AID );
@@ -132,10 +141,15 @@ class NFCUtils {
                 baos.write( VERSION_1 ); // min
                 baos.write( VERSION_1 ); // max
 
-                // Let's try writing the data too
-                write( baos, null == mType ? "" : mType );
-                write( baos, null == mLabel ? "" : mLabel );
-                write( baos, mData.coerceToHtmlText(mActivity) );
+                // Now write the data into a separate buffer so we can include its length
+                ByteArrayOutputStream dataStream = new ByteArrayOutputStream();
+                write( dataStream, null == mType ? "" : mType );
+                write( dataStream, null == mLabel ? "" : mLabel );
+                write( dataStream, mData.coerceToText(mActivity).toString() );
+                byte[] dataBytes = dataStream.toByteArray();
+                write( baos, dataBytes.length );
+                // Log.d( TAG, "data len: " + dataBytes.length );
+                baos.write( dataBytes );
 
                 byte[] msg = baos.toByteArray();
 
@@ -222,9 +236,22 @@ class NFCUtils {
         dos.flush();
     }
 
-    static String read( ByteArrayInputStream stream ) throws IOException
+    static void write( ByteArrayOutputStream stream, int val ) throws IOException
+    {
+        DataOutputStream dos = new DataOutputStream(stream);
+        dos.writeInt( val );
+        dos.flush();
+    }
+
+    static String readString( ByteArrayInputStream stream ) throws IOException
     {
         DataInputStream dis = new DataInputStream(stream);
         return dis.readUTF();
+    }
+
+    static int readInt( ByteArrayInputStream stream ) throws IOException
+    {
+        DataInputStream dis = new DataInputStream(stream);
+        return dis.readInt();
     }
 }

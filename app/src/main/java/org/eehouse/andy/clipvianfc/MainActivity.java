@@ -124,7 +124,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
         if (null != mClipData) {
             tv = (TextView) findViewById(R.id.clip_text);
-            tv.setText(mClipData.coerceToHtmlText(this));
+            tv.setText(mClipData.coerceToText(this));
         }
 
         findViewById(R.id.send).setEnabled( mClipData != null );
