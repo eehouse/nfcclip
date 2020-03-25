@@ -60,13 +60,13 @@ class Notify {
     private static String getChannelID( Context context, NotificationManager nm )
     {
         String name = String.format( "NOTIFY_%x", R.string.channel_desc );
-        NotificationChannel channel = nm.getNotificationChannel( name );
-        if ( channel == null ) {
-            if ( Build.VERSION.SDK_INT >= Build.VERSION_CODES.O ) {
+        if ( Build.VERSION.SDK_INT >= Build.VERSION_CODES.O ) {
+            NotificationChannel channel = nm.getNotificationChannel( name );
+            if ( channel == null ) {
                 String channelDesc = context.getString( R.string.channel_desc );
 
                 channel = new NotificationChannel( name, channelDesc,
-                                               NotificationManager.IMPORTANCE_LOW );
+                                                   NotificationManager.IMPORTANCE_LOW );
                 channel.enableVibration( true );
                 nm.createNotificationChannel( channel );
             }
