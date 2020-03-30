@@ -4,7 +4,9 @@ GITREV = GITREV.execute().text.trim()
 apply plugin: 'com.android.application'
 
 // AID must start with F (first 4 bits) and be from 5 to 16 bytes long
-def NFC_AID = "FD8A591453B4"
+def NFC_AID_DBG = "FD8A591453B4"
+def NFC_AID_REL = "FD32F43518A6"
+def APP_NAME = "NFCCopyPaste"
 
 android {
     compileSdkVersion 28
@@ -18,9 +20,6 @@ android {
         versionName "1.0"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
-
-        buildConfigField "String", "NFC_AID", "\"${NFC_AID}\""
-        resValue "string", "nfc_aid", "$NFC_AID"
     }
 
     signingConfigs {
@@ -38,6 +37,7 @@ android {
 
     buildTypes {
 		all {
+            resValue "string", "app_name", "\"${APP_NAME}\""
             buildConfigField "String", "GIT_REV", "\"$GITREV\""
 
             def stamp = Math.round(System.currentTimeMillis() / 1000)
@@ -46,9 +46,16 @@ android {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            buildConfigField "String", "NFC_AID", "\"${NFC_AID_REL}\""
+            resValue "string", "nfc_aid", "$NFC_AID_REL"
+        }
+        debug {
+            resValue "string", "app_name", "\"${APP_NAME}.d\""
+            applicationIdSuffix ".d"
+            buildConfigField "String", "NFC_AID", "\"${NFC_AID_DBG}\""
+            resValue "string", "nfc_aid", "$NFC_AID_DBG"
         }
     }
-
 }
 
 ext {

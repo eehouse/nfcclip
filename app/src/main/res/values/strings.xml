@@ -1,6 +1,4 @@
 <resources>
-  <string name="app_name">NFCCopyPaste</string>
-
   <string name="label_clip_text">Clipboard contents (available to send)</string>
   <string name="send">Start Sending</string>
   <string name="servicedesc">For transmitting clipboard contents via NFC</string>
@@ -48,7 +46,7 @@
   <string name="empty_hint">Clipboard is empty</string>
 
   <!-- Tabs -->
-  <string name="tab_clip">Clip</string>
+  <string name="tab_clip">Clipboard</string>
   <string name="tab_about">About</string>
   
   <string name="version_text_fmt">This is %1$s, version %2$s,
