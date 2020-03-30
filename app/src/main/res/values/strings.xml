@@ -38,15 +38,14 @@
   I hope you\'ll forgive the rough look of this app. I\'ve been
   programming Android for 10 years but am not a UI designer. I\'m
   sharing this because I hope it will be useful. If it is, and people
-  want to contribute icons or other visual improvements I\'ll include
-  them! Thanks.
+  want to contribute icons or other visual improvements, I\'ll include
+  them. Reach me at xwords@eehouse.org. Thanks!
   </string>
-  
 
   <string name="empty_hint">Clipboard is empty</string>
 
   <!-- Tabs -->
-  <string name="tab_clip">Clipboard</string>
+  <string name="tab_clip">Send Clipboard</string>
   <string name="tab_about">About</string>
   
   <string name="version_text_fmt">This is %1$s, version %2$s,
