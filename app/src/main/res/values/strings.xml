@@ -19,4 +19,40 @@
   <string name="channel_desc">General notifications</string>
   <string name="notify_receipt_title">Clipboard received</string>
   <string name="notify_receipt_body_fmt">New text: %1$s…</string>
+
+  <string name="about_expl">NFCCopyPaste has only one feature: it
+  transmits the contents of your clipboard to another device via NFC.
+  ("NFC" is Near-Field Communications, the super-short-distance radio
+  used for Android Pay and other tap-to-share
+  technologies.)
+
+  \n\n
+
+  I wrote it after Android 10 disabled the feature, based on NFC, that
+  lots of my favorite apps used to share data with each other. My wife
+  and I were used to sharing ColorNote shopping lists this way, for
+  example. I couldn\'t fix ColorNote, but I could take advantage of its
+  use of Copy-and-Paste. Now we share lists by copying them on one
+  device, touching the two, and pasting them on the other.
+
+  \n\n
+
+  I hope you\'ll forgive the rough look of this app. I\'ve been
+  programming Android for 10 years but am not a UI designer. I\'m
+  sharing this because I hope it will be useful. If it is, and people
+  want to contribute icons or other visual improvements I\'ll include
+  them! Thanks.
+  </string>
+  
+
+  <string name="empty_hint">Clipboard is empty</string>
+
+  <!-- Tabs -->
+  <string name="tab_clip">Clip</string>
+  <string name="tab_about">About</string>
+  
+  <string name="version_text_fmt">This is %1$s, version %2$s,
+  rev %3$s, built on %4$s.\n\nCopyright (C) 2020 by Eric House. This
+  free/open source software is released under the GNU Public
+  License.</string>
 </resources>

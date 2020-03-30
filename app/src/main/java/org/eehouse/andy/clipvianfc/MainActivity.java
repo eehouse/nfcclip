@@ -18,116 +18,46 @@
  */
 
 package org.eehouse.andy.clipvianfc;
-import androidx.appcompat.app.AppCompatActivity;
 
 import android.content.ClipData;
-import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
-import android.provider.Settings;
-import android.text.method.ScrollingMovementMethod;
 import android.util.Log;
 import android.view.View;
-import android.widget.Button;
-import android.widget.ProgressBar;
-import android.widget.TextView;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.fragment.app.Fragment;
+import androidx.viewpager.widget.ViewPager;
+import com.google.android.material.tabs.TabLayout;
 
-/* TODO
- */
-
-public class MainActivity extends AppCompatActivity implements View.OnClickListener,
-                                                               ClipboardManager.OnPrimaryClipChangedListener,
-                                                               NFCUtils.Callbacks {
+public class MainActivity extends AppCompatActivity {
     private final static String TAG = MainActivity.class.getSimpleName();
 
-    private ClipData.Item mClipData;
-    private String[] mType = {null};
-    private String[] mLabel = {null};
-    private boolean mHaveNFC;
+    private ViewPager mViewPager;
 
     @Override
     protected void onCreate(Bundle savedInstanceState)
     {
         super.onCreate(savedInstanceState);
 
-        mHaveNFC = NFCUtils.deviceSupportsNFC( this );
-        if ( !mHaveNFC ) {
+        if ( !NFCUtils.deviceSupportsNFC( this ) ) {
             setContentView( R.layout.activity_no_nfc );
-            findViewById(R.id.uninstall).setOnClickListener( this );
+            findViewById( R.id.uninstall )
+                .setOnClickListener( new View.OnClickListener() {
+                        @Override
+                        public void onClick( View view ) {
+                            uninstall();
+                        }
+                    } );
         } else {
-            setContentView(R.layout.activity_main);
-            ((TextView)findViewById(R.id.clip_text)).setMovementMethod(new ScrollingMovementMethod());
-            findViewById(R.id.send).setOnClickListener( this );
-            findViewById(R.id.enable).setOnClickListener( this );
+            setContentView( R.layout.main_pager );
 
-            ((ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE))
-                .addPrimaryClipChangedListener( this );
+            mViewPager = (ViewPager)findViewById( R.id.viewpager );
+            PageFragment.addAdapter( getSupportFragmentManager(), mViewPager );
+            TabLayout tabLayout = (TabLayout)findViewById( R.id.sliding_tabs );
+            tabLayout.setupWithViewPager( mViewPager );
         }
-    }
-
-    @Override
-    protected void onPostResume()
-    {
-        super.onPostResume();
-        if ( mHaveNFC ) {
-            showHideDisabled();
-        }
-    }
-
-    // On Android 10 you can't get at the clipboard unless you are the
-    // in-focus app. So that's where we'll check for contents.
-    @Override
-    public void onWindowFocusChanged( boolean hasFocus )
-    {
-        super.onWindowFocusChanged(hasFocus);
-        if ( hasFocus ) {
-            getClipData();
-        }
-    }
-
-    @Override
-    public void onClick(View view)
-    {
-        int id = view.getId();
-        switch ( id ) {
-        case R.id.send:
-            NFCUtils.sendClip( this, this, mType[0], mLabel[0], mClipData );
-            break;
-        case R.id.uninstall:
-            uninstall();
-            break;
-        case R.id.enable:
-            Intent intent = new Intent( Settings.ACTION_NFC_SETTINGS )
-                .addFlags( Intent.FLAG_ACTIVITY_NEW_DOCUMENT );
-            startActivity( intent );
-            break;
-        default:
-            assert false;
-        }
-    }
-
-    private void getClipData()
-    {
-        mClipData = Clip.getData( this, mType, mLabel );
-
-        TextView tv = (TextView)findViewById(R.id.clip_label);
-        if ( null == mLabel[0] ) {
-            tv.setVisibility( View.GONE );
-        } else {
-            tv.setVisibility( View.VISIBLE );
-            tv.setText( getString( R.string.labelLabel, mLabel[0] ) );
-        }
-        tv = (TextView)findViewById(R.id.clip_type);
-        tv.setText( getString( R.string.typeLabel, mType[0] ) );
-
-        if (null != mClipData) {
-            tv = (TextView) findViewById(R.id.clip_text);
-            tv.setText(mClipData.coerceToText(this));
-        }
-
-        findViewById(R.id.send).setEnabled( mClipData != null );
     }
 
     private void uninstall()
@@ -144,48 +74,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         boolean enabled = NFCUtils.nfcEnabled( this );
         findViewById(R.id.disabled_expl).setVisibility( enabled ? View.GONE : View.VISIBLE );
         findViewById(R.id.send).setVisibility( !enabled ? View.GONE : View.VISIBLE );
-    }
-
-    @Override
-    public void onPrimaryClipChanged()
-    {
-        getClipData();
-    }
-
-    @Override
-    public void onSendEnabled()
-    {
-        showSending( true );
-    }
-
-    @Override
-    public void onSendComplete( boolean succeeded )
-    {
-        showSending( false );
-    }
-
-    @Override
-    public void onProgressMade( final int cur, final int max )
-    {
-        runOnUiThread(new Runnable() {
-                @Override
-                public void run() {
-                    ProgressBar pb = (ProgressBar)findViewById( R.id.progress );
-                    pb.setMax(max);
-                    pb.setProgress(cur);
-                }
-            } );
-    }
-
-    private void showSending( final boolean sending )
-    {
-        runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                findViewById(R.id.send).setVisibility( sending ? View.GONE : View.VISIBLE );
-                findViewById(R.id.sending_status).setVisibility( !sending ? View.GONE : View.VISIBLE );
-            }
-        });
     }
 
     static Intent getSelfIntent( Context context )
