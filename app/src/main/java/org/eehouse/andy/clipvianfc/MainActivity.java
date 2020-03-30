@@ -19,6 +19,7 @@
 
 package org.eehouse.andy.clipvianfc;
 
+import android.app.Activity;
 import android.content.ClipData;
 import android.content.Context;
 import android.content.Intent;
@@ -47,7 +48,7 @@ public class MainActivity extends AppCompatActivity {
                 .setOnClickListener( new View.OnClickListener() {
                         @Override
                         public void onClick( View view ) {
-                            uninstall();
+                            uninstall( MainActivity.this );
                         }
                     } );
         } else {
@@ -60,13 +61,13 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private void uninstall()
+    static void uninstall( Activity activity )
     {
         Intent intent = new Intent(Intent.ACTION_DELETE)
             .setData(Uri.parse("package:" + BuildConfig.APPLICATION_ID ) )
             .putExtra( "android.intent.extra.UNINSTALL_ALL_USERS", true);
-        startActivity( intent );
-        finish();
+        activity.startActivity( intent );
+        activity.finish();
     }
 
     private void showHideDisabled()

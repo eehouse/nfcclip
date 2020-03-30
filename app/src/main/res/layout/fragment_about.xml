@@ -22,6 +22,21 @@
 
     <Space android:layout_height="20dp" android:layout_width="match_parent"/>
 
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/uninstall_expl"
+        android:textAppearance="?android:attr/textAppearanceMedium"
+        />
+    <Button android:id="@+id/uninstall"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/uninstall"
+            android:layout_gravity="center_horizontal"
+            />
+
+    <Space android:layout_height="20dp" android:layout_width="match_parent"/>
+
     <TextView android:id="@+id/version_text"
               android:layout_width="match_parent"
               android:layout_height="wrap_content"

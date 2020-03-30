@@ -7,6 +7,9 @@
   <string name="sending_status">Sending… Tap against receiving device now!</string>
 
   <string name="no_nfc_expl">NFC is not supported on this device. You might as well uninstall now.</string>
+
+  <string name="uninstall_expl">If this doesn\'t sound useful to you,
+  feel free to uninstall now using the button below. No hard feelings. 🙂</string>
   <string name="uninstall">Uninstall</string>
 
   <string name="must_enable_expl">NFC is available on your phone but
@@ -26,12 +29,13 @@
 
   \n\n
 
-  I wrote it after Android 10 disabled the feature, based on NFC, that
-  lots of my favorite apps used to share data with each other. My wife
-  and I were used to sharing ColorNote shopping lists this way, for
-  example. I couldn\'t fix ColorNote, but I could take advantage of its
-  use of Copy-and-Paste. Now we share lists by copying them on one
-  device, touching the two, and pasting them on the other.
+  Android 10 disabled the tap-to-share feature, based on NFC, that
+  lots of my favorite apps used to exchange data with themselves. My
+  wife and I were used to sharing ColorNote shopping lists this way,
+  for example. I couldn\'t fix ColorNote, but I could take advantage
+  of its use of Copy-and-Paste by writing this app. Now we share lists
+  by copying them on one device, touching the two, and pasting them on
+  the other.
 
   \n\n
 

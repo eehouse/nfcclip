@@ -31,7 +31,8 @@ import android.widget.TextView;
 import java.text.DateFormat;
 import java.util.Date;
 
-public class AboutFragment extends PageFragment {
+public class AboutFragment extends PageFragment
+    implements View.OnClickListener {
     private static final String TAG = AboutFragment.class.getSimpleName();
     private static final int CODE_FOR_PERMS = 13820;
 
@@ -41,6 +42,7 @@ public class AboutFragment extends PageFragment {
                               Bundle savedInstanceState )
     {
         View view = super.onCreateView( inflater, container, savedInstanceState );
+        view.findViewById( R.id.uninstall ).setOnClickListener( this );
 
         TextView tv = (TextView)view.findViewById(R.id.version_text);
         DateFormat df = DateFormat.getDateTimeInstance( DateFormat.FULL,
@@ -54,4 +56,18 @@ public class AboutFragment extends PageFragment {
 
         return view;
     }
+
+    @Override
+    public void onClick(View view)
+    {
+        int id = view.getId();
+        switch ( id ) {
+        case R.id.uninstall:
+            MainActivity.uninstall(getActivity());
+            break;
+        default:
+            assert false;
+        }
+    }
+
 }
