@@ -7,27 +7,36 @@
             android:orientation="vertical"
             tools:context=".ui.MainActivity"
             >
-  <LinearLayout
-      android:layout_width="match_parent"
-      android:layout_height="match_parent"
-      android:orientation="vertical"
-      android:padding="10dp"
-      >
-    <TextView
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="@string/about_expl"
-        android:textAppearance="?android:attr/textAppearanceMedium"
-        />
+  <LinearLayout android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:orientation="vertical"
+                android:padding="10dp"
+                >
+    <TextView android:layout_width="match_parent"
+              android:layout_height="wrap_content"
+              android:text="@string/about_expl_1"
+              android:textAppearance="?android:attr/textAppearanceMedium"
+              />
+    <TextView android:paddingTop="5dp"
+              android:layout_width="match_parent"
+              android:layout_height="wrap_content"
+              android:text="@string/about_expl_2"
+              android:textAppearance="?android:attr/textAppearanceMedium"
+              />
+    <TextView android:paddingTop="5dp"
+              android:layout_width="match_parent"
+              android:layout_height="wrap_content"
+              android:text="@string/about_expl_3"
+              android:textAppearance="?android:attr/textAppearanceMedium"
+              />
 
     <Space android:layout_height="20dp" android:layout_width="match_parent"/>
 
-    <TextView
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="@string/uninstall_expl"
-        android:textAppearance="?android:attr/textAppearanceMedium"
-        />
+    <TextView android:layout_width="match_parent"
+              android:layout_height="wrap_content"
+              android:text="@string/uninstall_expl"
+              android:textAppearance="?android:attr/textAppearanceMedium"
+              />
     <Button android:id="@+id/uninstall"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"

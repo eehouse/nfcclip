@@ -4,9 +4,13 @@
   <string name="servicedesc">For transmitting clipboard contents via NFC</string>
   <string name="typeLabel">Mime type: %1$s</string>
   <string name="labelLabel">Label: %1$s</string>
-  <string name="sending_status">Sending… Tap against receiving device now!</string>
 
-  <string name="no_nfc_expl">NFC is not supported on this device. You might as well uninstall now.</string>
+  <string name="sending_status">Sending… Tap against receiving device
+  now! (Remember that NFCCopyPaste must be installed there
+  too.)</string>
+
+  <string name="no_nfc_expl">NFC is not supported on this device. You
+  might as well uninstall now.</string>
 
   <string name="uninstall_expl">If this doesn\'t sound useful to you,
   feel free to uninstall now using the button below. No hard feelings. 🙂</string>
@@ -21,30 +25,24 @@
   <string name="notify_receipt_title">Clipboard received</string>
   <string name="notify_receipt_body_fmt">New text: %1$s…</string>
 
-  <string name="about_expl">NFCCopyPaste has only one feature: it
-  transmits the contents of your clipboard to another device via NFC.
-  ("NFC" is Near-Field Communications, the super-short-distance radio
-  used for Android Pay and other tap-to-share
-  technologies.)
+  <string name="about_expl_1">NFCCopyPaste does only one thing: it
+  transmits the contents of your device\'s clipboard to another device
+  via NFC. ("NFC" is Near-Field Communications, the tap-to-share radio
+  technology used for features like Google Pay.)</string>
 
-  \n\n
+  <string name="about_expl_2">Android 10 disabled the \"Android Beam\"
+  feature, based on NFC, that lots of my favorite apps used to
+  exchange data with themselves. My wife and I were used to sharing
+  ColorNote shopping lists this way, for example. I couldn\'t fix
+  ColorNote, but I could take advantage of its use of Copy-and-Paste
+  by writing this app. Now we share lists by copying them on one
+  device, touching the two, and pasting them on the other.</string>
 
-  Android 10 disabled the tap-to-share feature, based on NFC, that
-  lots of my favorite apps used to exchange data with themselves. My
-  wife and I were used to sharing ColorNote shopping lists this way,
-  for example. I couldn\'t fix ColorNote, but I could take advantage
-  of its use of Copy-and-Paste by writing this app. Now we share lists
-  by copying them on one device, touching the two, and pasting them on
-  the other.
-
-  \n\n
-
-  I hope you\'ll forgive the rough look of this app. I\'ve been
+  <string name="about_expl_3">I hope you\'ll forgive the rough look of this app. I\'ve been
   programming Android for 10 years but am not a UI designer. I\'m
   sharing this because I hope it will be useful. If it is, and people
   want to contribute icons or other visual improvements, I\'ll include
-  them. Reach me at xwords@eehouse.org. Thanks!
-  </string>
+  them. Reach me at xwords@eehouse.org. Thanks!</string>
 
   <string name="empty_hint">Clipboard is empty</string>
 
