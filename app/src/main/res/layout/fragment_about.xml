@@ -30,7 +30,26 @@
               android:textAppearance="?android:attr/textAppearanceMedium"
               />
 
-    <Space android:layout_height="20dp" android:layout_width="match_parent"/>
+    <LinearLayout android:id="@+id/qrcode"
+                  android:layout_width="match_parent"
+                  android:layout_height="match_parent"
+                  android:orientation="vertical"
+                  >
+      <View style="@style/about_separator"/>
+
+      <TextView android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/qrcode_expl"
+                android:textAppearance="?android:attr/textAppearanceMedium"
+                />
+      <ImageView android:layout_width="wrap_content"
+                 android:layout_height="wrap_content"
+                 android:src="@drawable/qrcode"
+                 android:layout_gravity="center_horizontal"
+                 />
+    </LinearLayout>
+
+    <View style="@style/about_separator"/>
 
     <TextView android:layout_width="match_parent"
               android:layout_height="wrap_content"
@@ -44,7 +63,7 @@
             android:layout_gravity="center_horizontal"
             />
 
-    <Space android:layout_height="20dp" android:layout_width="match_parent"/>
+    <View style="@style/about_separator"/>
 
     <TextView android:id="@+id/version_text"
               android:layout_width="match_parent"

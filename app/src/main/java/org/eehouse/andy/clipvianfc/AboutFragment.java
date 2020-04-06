@@ -51,8 +51,11 @@ public class AboutFragment extends PageFragment
         String appName = getString( R.string.app_name );
         tv.setText( getString( R.string.version_text_fmt, appName,
                                BuildConfig.VERSION_NAME,
-                               BuildConfig.GIT_REV,
+                               BuildConfig.GIT_REV, BuildConfig.VARIANT_NAME,
                                dateString ) );
+
+        view.findViewById( R.id.qrcode )
+            .setVisibility( BuildConfig.SHOW_INSTALL_QR ? View.VISIBLE : View.GONE );
 
         return view;
     }

@@ -12,8 +12,9 @@
   <string name="no_nfc_expl">NFC is not supported on this device. You
   might as well uninstall now.</string>
 
-  <string name="uninstall_expl">If this doesn\'t sound useful to you,
-  feel free to uninstall now using the button below. No hard feelings. 🙂</string>
+  <string name="uninstall_expl">If NFCCopyPaste doesn\'t sound useful
+  to you, feel free to uninstall now using the button below. No hard
+  feelings. 🙂</string>
   <string name="uninstall">Uninstall</string>
 
   <string name="must_enable_expl">NFC is available on your phone but
@@ -51,7 +52,10 @@
   <string name="tab_about">About</string>
   
   <string name="version_text_fmt">This is %1$s, version %2$s,
-  rev %3$s, built on %4$s.\n\nCopyright (C) 2020 by Eric House. This
+  rev %3$s, %4$s variant, built on %5$s.\n\nCopyright (C) 2020 by Eric House. This
   free/open source software is released under the GNU Public
   License.</string>
+
+  <string name="qrcode_expl">Here\'s a QR code that a member of your
+  social distancing group can use to install NFCCopyPaste.</string>
 </resources>
