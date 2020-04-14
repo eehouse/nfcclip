@@ -61,6 +61,35 @@
           android:text="@string/send"
           android:layout_gravity="center_horizontal"
           />
+
+  <TextView android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/file_send_text"
+            android:textAppearance="?android:attr/textAppearanceMedium"
+            />
+  <TextView android:id="@+id/chosen_file"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="@string/no_file_hint"
+            />
+  <LinearLayout android:orientation="horizontal"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                >
+    <Button android:id="@+id/file_send"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/file_send"
+            android:layout_gravity="center_horizontal"
+            />
+    <Button android:id="@+id/file_choose"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/file_choose"
+            android:layout_gravity="center_horizontal"
+            />
+  </LinearLayout>
+
   <LinearLayout android:id="@+id/sending_status"
                 android:visibility="gone"
                 android:orientation="vertical"

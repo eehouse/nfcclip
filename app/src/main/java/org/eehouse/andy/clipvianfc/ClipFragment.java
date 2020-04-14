@@ -20,27 +20,40 @@
 package org.eehouse.andy.clipvianfc;
 
 import android.app.Activity;
+import android.app.Dialog;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.os.Bundle;
+import android.os.Environment;
 import android.provider.Settings;
+import android.text.TextUtils;
 import android.text.method.ScrollingMovementMethod;
 import android.view.View;
 import android.view.ViewTreeObserver;
+import android.widget.ArrayAdapter;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.appcompat.app.AlertDialog;
+import androidx.fragment.app.DialogFragment;
 import androidx.fragment.app.Fragment;
+import android.widget.ListAdapter;
+
+import java.io.File;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 
 public class ClipFragment extends PageFragment
     implements View.OnClickListener,
                ClipboardManager.OnPrimaryClipChangedListener,
                NFCUtils.Callbacks {
-    private final String TAG = ClipFragment.class.getSimpleName();
+    private static final String TAG = ClipFragment.class.getSimpleName();
     private View mParentView;
     private ClipData.Item mClipData;
     private String[] mType = {null};
@@ -57,8 +70,12 @@ public class ClipFragment extends PageFragment
     {
         super.onViewCreated(view, savedInstanceState);
         mParentView = view;
-        view.findViewById(R.id.send).setOnClickListener( this );
-        view.findViewById(R.id.enable).setOnClickListener( this );
+
+        int[] buttons = { R.id.send, R.id.enable, R.id.file_send, R.id.file_choose, };
+        for ( int id : buttons ) {
+            view.findViewById(id).setOnClickListener( this );
+        }
+
         ((TextView)view.findViewById(R.id.clip_text))
             .setMovementMethod(new ScrollingMovementMethod());
 
@@ -90,8 +107,27 @@ public class ClipFragment extends PageFragment
                 .addFlags( Intent.FLAG_ACTIVITY_NEW_DOCUMENT );
             getActivity().startActivity( intent );
             break;
+
+        case R.id.file_send:
+            TextView tv = (TextView)mParentView.findViewById(R.id.chosen_file);
+            String desc = tv.getText().toString();
+            File file = FilePickDialogFragment.getForDesc( desc );
+            if ( false && null != file ) {
+                NFCUtils.sendFile( getActivity(), this, file );
+            }
+            break;
+        case R.id.file_choose:
+            new FilePickDialogFragment( new FilePickDialogFragment.ItemSelProc() {
+                    @Override
+                    public void onItemSelected( String item ) {
+                        TextView view = (TextView)mParentView.findViewById(R.id.chosen_file);
+                        view.setText( item );
+                    }
+                } ).show( getFragmentManager(), "NoticeDialogFragment");
+            break;
+
         default:
-            assert false;
+            Assert.fail();
         }
     }
 
@@ -150,7 +186,6 @@ public class ClipFragment extends PageFragment
                     @Override
                     public void run() {
                         mClipData = Clip.getData( activity, mType, mLabel );
-                        Log.d( TAG, "got clip data: %s", mClipData );
 
                         TextView tv = (TextView)mParentView.findViewById(R.id.clip_label);
                         if ( null == mLabel[0] ) {
@@ -181,4 +216,88 @@ public class ClipFragment extends PageFragment
         mParentView.findViewById( R.id.send )
             .setVisibility( !enabled ? View.GONE : View.VISIBLE );
     }
+
+    public static class FilePickDialogFragment extends DialogFragment {
+
+        interface ItemSelProc {
+            void onItemSelected( String item );
+        }
+        ItemSelProc mProc;
+
+        public FilePickDialogFragment( ItemSelProc proc )
+        {
+            super();
+            mProc = proc;
+        }
+
+        @Override
+        public Dialog onCreateDialog(Bundle savedInstanceState )
+        {
+            final ListAdapter adapter = listFiles();
+            // Use the Builder class for convenient dialog construction
+            AlertDialog.Builder builder = new AlertDialog.Builder(getActivity());
+            builder
+                .setAdapter( adapter, new DialogInterface.OnClickListener() {
+                        @Override
+                        public void onClick( DialogInterface dialogInterface, int ii ) {
+                            String item = (String)adapter.getItem(ii);
+                            mProc.onItemSelected( item );
+                        }
+                    })
+                .setNegativeButton( android.R.string.cancel, null )
+                ;
+
+            return builder.create();
+        }
+
+        public static File getForDesc( String desc )
+        {
+            Log.d( TAG, "getForDesc(%s)", desc );
+            File result = null;
+            String[] parts = TextUtils.split( desc, ":" );
+            if ( 2 <= parts.length ) {
+                String[] pathParts = Arrays.copyOfRange( parts, 0, parts.length - 1 );
+                String name = TextUtils.join(":", pathParts );
+                File dir = Environment.getExternalStorageDirectory();
+                dir = new File( dir, Environment.DIRECTORY_DOWNLOADS );
+                result = new File( dir, name );
+                Log.d( TAG, "getForDesc(%s) => %s", desc, result );
+            }
+            return result;
+        }
+
+        private static String descForFile( File file )
+        {
+            long len = file.length();
+            String name = file.getName();
+            String entry = String.format("%s:%d bytes", name, len);
+            return entry;
+        }
+
+        private ArrayAdapter<String> listFiles()
+        {
+            List<String> fileList = new ArrayList<>();
+            Log.d( TAG, "calling getExternalStorageDirectory()" );
+            File dir = Environment.getExternalStorageDirectory();
+            dir = new File( dir, Environment.DIRECTORY_DOWNLOADS );
+            File[] files = dir.listFiles();
+            if ( null == files ) {
+                Log.e( TAG, "got nothing from getExternalStorageDirectory()" );
+            } else {
+                for ( File file : files ) {
+                    if ( file.isFile() && file.canRead() ) {
+                        fileList.add( descForFile(file) );
+                    }
+                }
+            }
+
+            String[] fileDescs = fileList.toArray( new String[fileList.size()] );
+            ArrayAdapter<String> adapter
+                = new ArrayAdapter<>( getContext(),
+                                      android.R.layout.simple_spinner_item,
+                                      fileDescs );
+            return adapter;
+        }
+    }
+
 }

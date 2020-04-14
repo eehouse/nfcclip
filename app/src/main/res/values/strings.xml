@@ -58,4 +58,11 @@
 
   <string name="qrcode_expl">Here\'s a QR code that a member of your
   social distancing group can use to install NFCCopyPaste.</string>
+
+  <string name="file_send_text">You can also send an entire file,
+  though it may be slower than via other longer-range wireless
+  choices. Estimated times are provided, but not guaranteed.</string>
+  <string name="file_send">Send file</string>
+  <string name="file_choose">Choose file</string>
+  <string name="no_file_hint">No file chosen</string>
 </resources>
