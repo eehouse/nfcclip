@@ -24,7 +24,6 @@ import android.content.ClipDescription;
 import android.content.ClipboardManager;
 import android.content.Context;
 import android.net.Uri;
-import android.util.Log;
 
 import static android.content.ClipDescription.MIMETYPE_TEXT_PLAIN;
 

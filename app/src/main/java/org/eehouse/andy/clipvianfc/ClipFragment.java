@@ -1,4 +1,4 @@
-/* -*- compile-command: "find-and-gradle.sh inDeb"; -*- */
+/* -*- compile-command: "find-and-gradle.sh inFossDeb"; -*- */
 /*
  * Copyright 2020 by Eric House (eehouse@eehouse.org).  All rights reserved.
  *
@@ -27,7 +27,6 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.provider.Settings;
 import android.text.method.ScrollingMovementMethod;
-import android.util.Log;
 import android.view.View;
 import android.view.ViewTreeObserver;
 import android.widget.ProgressBar;

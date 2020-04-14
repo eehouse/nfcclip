@@ -21,20 +21,20 @@ package org.eehouse.andy.clipvianfc;
 
 import android.nfc.cardemulation.HostApduService;
 import android.os.Bundle;
-import android.util.Log;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
 
 public class NFCCardService extends HostApduService {
     private static final String TAG = NFCCardService.class.getSimpleName();
 
-    private static final byte[] STATUS_FAILED = { 0x6F, 0x00, };
+    static final byte[] STATUS_FAILED = { 0x6F, 0x00, };
     static final byte[] STATUS_SUCCESS = { (byte)0x90, 0x00, };
 
-    private ByteArrayOutputStream mBuffer;
+    private NFCUtils.Receiver mReceiver;
 
     @Override
     public byte[] processCommandApdu( byte[] apdu, Bundle extras )
@@ -42,46 +42,16 @@ public class NFCCardService extends HostApduService {
         byte[] result = STATUS_FAILED;
 
         if ( null != apdu ) {
-            Log.d( TAG, "processCommandApdu(): received " + apdu.length + " bytes" );
-            // Log.d( TAG, NFCUtils.hexDump( apdu ) );
             try {
-                if ( null == mBuffer ) {
-                    ByteArrayInputStream bais = new ByteArrayInputStream( apdu );
-                    byte[] header = new byte[NFCUtils.HEADER.length];
-                    bais.read( header );
-                    if ( !Arrays.equals( header, NFCUtils.HEADER ) ) {
-                        throw new Exception("header mismatch");
-                    }
-
-                    byte aidLen = (byte)bais.read();
-                    byte[] aid = new byte[aidLen];
-                    bais.read( aid );
-                    if ( !Arrays.equals( aid, NFCUtils.hexStr2ba( BuildConfig.NFC_AID ) ) ) {
-                        throw new Exception("aid mismatch");
-                    }
-                    byte minVers = (byte)bais.read();
-                    byte maxVers = (byte)bais.read();
-                    if ( NFCUtils.VERSION_1 != minVers && NFCUtils.VERSION_1 != maxVers ) {
-                        throw new Exception("bad version codes: " + minVers + ", " + maxVers);
-                    }
-
-                    // Get this far? We're connected. Save the rest for later
-                    byte[] rest = new byte[bais.available()];
-                    bais.read( rest );
-                    mBuffer = new ByteArrayOutputStream();
-                    mBuffer.write( rest );
-                    Log.d( TAG, "processCommandApdu(): now have " + mBuffer.size()
-                           + " bytes in buffer" );
+                if ( null == mReceiver ) {
+                    mReceiver = NFCUtils.makeReceiver( this, apdu );
+                    result = mReceiver.receiveFirst();
                 } else {
-                    mBuffer.write( apdu );
+                    result = mReceiver.receive( apdu );
                 }
-
-                result = STATUS_SUCCESS;
             } catch ( Exception ex ) {
-                Log.e( TAG, "exception: " + ex );
+                Log.e( TAG, "processCommandApdu() got %s", ex );
             }
-        } else {
-            Log.e( TAG, "processCommandApdu(): apdu null!" );
         }
 
         return result;
@@ -101,34 +71,6 @@ public class NFCCardService extends HostApduService {
         }
         Log.d( TAG, "onDeactivated(reason=" + str + ")" );
 
-        processBuffer();
-    }
-
-    private void processBuffer()
-    {
-        Log.d( TAG, "processBuffer()" );
-        if ( null != mBuffer ) {
-            byte[] buffer = mBuffer.toByteArray();
-            mBuffer = null;
-            Log.d( TAG, "processing " + buffer.length + " bytes" );
-            try {
-                ByteArrayInputStream bais = new ByteArrayInputStream( buffer );
-
-                int len = NFCUtils.readInt( bais );
-                if ( len != bais.available() ) {
-                    Log.e( TAG, "len bad: have " + bais.available() + " but expect " + len );
-                } else {
-                    String mimeType = NFCUtils.readString( bais );
-                    String label = NFCUtils.readString( bais );
-                    String data = NFCUtils.readString( bais );
-                    Clip.setData( this, mimeType, label, data );
-                    Notify.post( this, data );
-                }
-            } catch ( IOException ioe ) {
-                Log.e( TAG, "processBuffer(): exception: " + ioe );
-            }
-        } else {
-            Log.e( TAG, "processBuffer(): nothing to process" );
-        }
+        mReceiver = null;
     }
 }
