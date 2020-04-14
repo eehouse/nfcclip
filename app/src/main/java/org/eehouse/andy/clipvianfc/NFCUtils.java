@@ -38,6 +38,8 @@ import java.io.IOException;
 import java.math.BigInteger;
 import java.security.MessageDigest;
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
 
 // Let's treat each thing to send as a huge byte array. Subclasses provide
 // ways to get subarrays. In the file case, they're sections of the file. In
@@ -175,7 +177,7 @@ class NFCUtils {
                     mMaxPacketLen = MY_MAX;
                 }
                 mMaxPacketLen -= HASH_LEN;
-                Log.d( TAG, "onTagDiscovered() connected; max len: " + mMaxPacketLen );
+                Log.d( TAG, "onTagDiscovered() connected; max len: %d", mMaxPacketLen );
 
                 byte[] aidBytes = hexStr2ba( BuildConfig.NFC_AID );
                 ByteArrayOutputStream baos = new ByteArrayOutputStream();
@@ -422,20 +424,43 @@ class NFCUtils {
         Context context() { return mContext; }
     }
 
+    // We'll keep clip data in memory. We still recover from a partial
+    // transmission as long as the app isn't restarted
+    static Map<String, ByteArrayOutputStream> sPendingClips = new HashMap<>();
+
+    private static ByteArrayOutputStream getBuffer( String sum )
+    {
+        synchronized ( sPendingClips ) {
+            ByteArrayOutputStream baos;
+            if ( !sPendingClips.containsKey( sum ) ) {
+                sPendingClips.put( sum, new ByteArrayOutputStream() );
+            }
+            return sPendingClips.get( sum );
+        }
+    }
+
+    private static void clearBuffer( String sum )
+    {
+        synchronized ( sPendingClips ) {
+            sPendingClips.remove( sum );
+        }
+    }
+
     static class ClipReceiver extends MultiPartReceiver {
         private ByteArrayOutputStream mBuffer;
 
         private ClipReceiver( Context context, ByteArrayInputStream bais )
         {
             super( context, bais );
+            mBuffer = getBuffer( mSum );
         }
 
         @Override
         byte[] receiveFirst()
         {
+            Log.d( TAG, "receiveFirst()" );
             byte[] result = null;
             try {
-                mBuffer = new ByteArrayOutputStream();
                 // Called after the initial packet checks out. We need to write
                 // back what we want/need
                 ByteArrayOutputStream baos = new ByteArrayOutputStream();
@@ -459,6 +484,7 @@ class NFCUtils {
         @Override
         byte[] receive( byte[] apdu )
         {
+            Log.d( TAG, "receive()" );
             byte[] result = null;
             try {
                 ByteArrayInputStream bais = new ByteArrayInputStream( apdu );
@@ -498,9 +524,9 @@ class NFCUtils {
                     Log.e( TAG, "checksum mismatch!!!!" );
                 } else {
                     Log.d( TAG, "checksums match! We got it!!!" );
-                    mBuffer = null;
+                    clearBuffer( mSum );
 
-                    Log.d( TAG, "processing " + buffer.length + " bytes" );
+                    Log.d( TAG, "processing %d bytes", buffer.length );
                     try {
                         ByteArrayInputStream bais = new ByteArrayInputStream( buffer );
 

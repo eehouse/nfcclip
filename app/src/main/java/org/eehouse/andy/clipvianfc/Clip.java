@@ -39,7 +39,7 @@ public class Clip {
             int count = desc.getMimeTypeCount();
             for ( int ii = 0; ii < count; ++ii ) {
                 String typ = desc.getMimeType( ii );
-                Log.d( TAG, "got type " + ii + ": " + typ);
+                Log.d( TAG, "got type %d: %s", ii, typ);
                 if ( typ.startsWith("text/")) {
                     pasteData = clipboard.getPrimaryClip().getItemAt(0);
                     mimeTypeOut[0] = typ;
@@ -49,7 +49,7 @@ public class Clip {
                 }
             }
         }
-        Log.d( TAG, "getData() => " + pasteData);
+        Log.d( TAG, "getData() => %s", pasteData);
         return pasteData;
     }
 

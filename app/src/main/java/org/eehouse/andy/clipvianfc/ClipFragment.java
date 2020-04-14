@@ -144,31 +144,33 @@ public class ClipFragment extends PageFragment
 
     private void getClipData()
     {
-        getActivity().runOnUiThread( new Runnable() {
-                @Override
-                public void run() {
-                    Context context = getContext();
-                    mClipData = Clip.getData( context, mType, mLabel );
-                    Log.d( TAG, "got clip data: " + mClipData );
+        final Activity activity = getActivity();
+        if ( null != activity ) {
+            activity.runOnUiThread( new Runnable() {
+                    @Override
+                    public void run() {
+                        mClipData = Clip.getData( activity, mType, mLabel );
+                        Log.d( TAG, "got clip data: %s", mClipData );
 
-                    TextView tv = (TextView)mParentView.findViewById(R.id.clip_label);
-                    if ( null == mLabel[0] ) {
-                        tv.setVisibility( View.GONE );
-                    } else {
-                        tv.setVisibility( View.VISIBLE );
-                        tv.setText( getString( R.string.labelLabel, mLabel[0] ) );
+                        TextView tv = (TextView)mParentView.findViewById(R.id.clip_label);
+                        if ( null == mLabel[0] ) {
+                            tv.setVisibility( View.GONE );
+                        } else {
+                            tv.setVisibility( View.VISIBLE );
+                            tv.setText( getString( R.string.labelLabel, mLabel[0] ) );
+                        }
+                        tv = (TextView)mParentView.findViewById(R.id.clip_type);
+                        tv.setText( getString( R.string.typeLabel, mType[0] ) );
+
+                        if (null != mClipData) {
+                            tv = (TextView) mParentView.findViewById(R.id.clip_text);
+                            tv.setText( mClipData.coerceToText(activity) );
+                        }
+
+                        mParentView.findViewById(R.id.send).setEnabled( mClipData != null );
                     }
-                    tv = (TextView)mParentView.findViewById(R.id.clip_type);
-                    tv.setText( getString( R.string.typeLabel, mType[0] ) );
-
-                    if (null != mClipData) {
-                        tv = (TextView) mParentView.findViewById(R.id.clip_text);
-                        tv.setText( mClipData.coerceToText(context) );
-                    }
-
-                    mParentView.findViewById(R.id.send).setEnabled( mClipData != null );
-                }
-            } );
+                } );
+        }
     }
 
     private void showHideDisabled()
