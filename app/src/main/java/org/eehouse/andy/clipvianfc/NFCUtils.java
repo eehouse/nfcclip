@@ -256,13 +256,18 @@ class NFCUtils {
             boolean shouldContinue = false;
             try {
                 ByteArrayInputStream bais = new ByteArrayInputStream( response );
-                int totalAvail = getTotalToSend();
-                int totalReceived = readInt( bais );
-                int nextPacket = readInt( bais );
-                mNextPacket = nextPacket;
-                shouldContinue = totalReceived < totalAvail;
+                byte[] status = new byte[NFCCardService.STATUS_SUCCESS.length];
+                bais.read( status );
+                shouldContinue =  Arrays.equals( status, NFCCardService.STATUS_SUCCESS );
                 if ( shouldContinue ) {
-                    callbacks().onProgressMade( totalReceived, totalAvail );
+                    int totalAvail = getTotalToSend();
+                    int totalReceived = readInt( bais );
+                    int nextPacket = readInt( bais );
+                    mNextPacket = nextPacket;
+                    shouldContinue = totalReceived < totalAvail;
+                    if ( shouldContinue ) {
+                        callbacks().onProgressMade( totalReceived, totalAvail );
+                    }
                 }
             } catch ( IOException ioe ) {
                 Assert.fail();
@@ -340,32 +345,23 @@ class NFCUtils {
     private static class FileReader extends Reader {
         private File mFile;
         private String mSum;
-        private int mFileLen;
-        private RandomAccessFile mRaf;
-
         private FileReader( Activity activity, Callbacks callbacks, File file )
         {
             super( activity, callbacks );
             mFile = file;
             mSum = getMd5Sum( mFile );
-            mFileLen = (int)mFile.length();
-
-            try {
-                mRaf = new RandomAccessFile( mFile, "r" );
-            } catch ( IOException ioe ) {
-                Assert.fail();
-            }
         }
 
         @Override
-        int getTotalToSend() { return mFileLen; }
+        int getTotalToSend() { return (int)mFile.length(); }
 
         @Override
         void getBytesFrom( int offset, byte[] outbuf )
         {
             try {
-                mRaf.seek( offset );
-                mRaf.readFully( outbuf );
+                RandomAccessFile raf = new RandomAccessFile( mFile, "r" );
+                raf.seek( offset );
+                raf.readFully( outbuf );
             } catch ( IOException fnf ) {
                 Assert.fail();
             }
@@ -376,7 +372,8 @@ class NFCUtils {
         {
             byte[] result = null;
             try {
-                MultiPartReceiver.writeHeader( baos, FILE, mFileLen, mMaxPacketLen, mSum );
+                MultiPartReceiver.writeHeader( baos, FILE, (int)mFile.length(),
+                                               mMaxPacketLen, mSum );
                 
                 write( baos, mFile.getName() );
 
@@ -434,6 +431,13 @@ class NFCUtils {
         dos.flush();
     }
 
+    static void write( ByteArrayOutputStream stream, long val ) throws IOException
+    {
+        DataOutputStream dos = new DataOutputStream(stream);
+        dos.writeLong( val );
+        dos.flush();
+    }
+
     static String readString( ByteArrayInputStream stream ) throws IOException
     {
         DataInputStream dis = new DataInputStream(stream);
@@ -444,6 +448,12 @@ class NFCUtils {
     {
         DataInputStream dis = new DataInputStream(stream);
         return dis.readInt();
+    }
+
+    static long readLong( ByteArrayInputStream stream ) throws IOException
+    {
+        DataInputStream dis = new DataInputStream(stream);
+        return dis.readLong();
     }
 
     abstract static class Receiver {
@@ -513,7 +523,10 @@ class NFCUtils {
             
                 if ( restHash == hash ) {
                     store( mNextPacket, rest );
+                    // mBuffer.write( rest );
                     checkFinished();
+
+                    response.write( NFCCardService.STATUS_SUCCESS );
                     writeRequest( response );
                 } else {
                     Log.e( TAG, "checksums don't match; bailing" );
