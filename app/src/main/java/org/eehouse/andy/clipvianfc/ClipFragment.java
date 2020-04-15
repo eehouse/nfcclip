@@ -19,6 +19,7 @@
 
 package org.eehouse.andy.clipvianfc;
 
+import android.Manifest;
 import android.app.Activity;
 import android.app.Dialog;
 import android.content.ClipData;
@@ -26,6 +27,7 @@ import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.os.Environment;
 import android.provider.Settings;
@@ -40,6 +42,7 @@ import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
+import androidx.core.content.ContextCompat;
 import androidx.fragment.app.DialogFragment;
 import androidx.fragment.app.Fragment;
 import android.widget.ListAdapter;
@@ -54,6 +57,8 @@ public class ClipFragment extends PageFragment
                ClipboardManager.OnPrimaryClipChangedListener,
                NFCUtils.Callbacks {
     private static final String TAG = ClipFragment.class.getSimpleName();
+    private static final int REQUEST_WRITE_CODE = 38278;
+    private static final String WRITE_EXTERNAL_STORAGE = Manifest.permission.WRITE_EXTERNAL_STORAGE;
     private View mParentView;
     private ClipData.Item mClipData;
     private String[] mType = {null};
@@ -91,7 +96,7 @@ public class ClipFragment extends PageFragment
                 } );
 
         ((ClipboardManager) getContext().getSystemService(Context.CLIPBOARD_SERVICE))
-                .addPrimaryClipChangedListener( this );
+            .addPrimaryClipChangedListener( this );
     }
 
     @Override
@@ -117,17 +122,27 @@ public class ClipFragment extends PageFragment
             }
             break;
         case R.id.file_choose:
-            new FilePickDialogFragment( new FilePickDialogFragment.ItemSelProc() {
-                    @Override
-                    public void onItemSelected( String item ) {
-                        TextView view = (TextView)mParentView.findViewById(R.id.chosen_file);
-                        view.setText( item );
-                    }
-                } ).show( getFragmentManager(), "NoticeDialogFragment");
+            launchPickerDialog();
             break;
 
         default:
             Assert.fail();
+        }
+    }
+
+    @Override
+    public void onRequestPermissionsResult( int requestCode, @NonNull String[] permissions,
+                                            @NonNull int[] grantResults )
+    {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if ( requestCode == REQUEST_WRITE_CODE ) {
+            for ( int ii = 0; ii < permissions.length; ++ii ) {
+                if ( permissions[ii].equals(WRITE_EXTERNAL_STORAGE) &&
+                     PackageManager.PERMISSION_GRANTED == grantResults[ii] ) {
+                    launchPickerDialog();
+                    break;
+                }
+            }
         }
     }
 
@@ -168,14 +183,14 @@ public class ClipFragment extends PageFragment
     private void showSending( final boolean sending )
     {
         getActivity().runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                mParentView.findViewById(R.id.send)
-                    .setVisibility( sending ? View.GONE : View.VISIBLE );
-                mParentView.findViewById(R.id.sending_status)
-                    .setVisibility( !sending ? View.GONE : View.VISIBLE );
-            }
-        });
+                @Override
+                public void run() {
+                    mParentView.findViewById(R.id.send)
+                        .setVisibility( sending ? View.GONE : View.VISIBLE );
+                    mParentView.findViewById(R.id.sending_status)
+                        .setVisibility( !sending ? View.GONE : View.VISIBLE );
+                }
+            });
     }
 
     private void getClipData()
@@ -217,6 +232,34 @@ public class ClipFragment extends PageFragment
             .setVisibility( !enabled ? View.GONE : View.VISIBLE );
     }
 
+    private boolean haveReadPermission()
+    {
+        boolean result = false;
+        Activity activity = getActivity();
+        if ( null != activity ) {
+            result = ContextCompat.checkSelfPermission( activity, WRITE_EXTERNAL_STORAGE)
+                == PackageManager.PERMISSION_GRANTED;
+            if ( !result ) {
+                requestPermissions( new String[] { WRITE_EXTERNAL_STORAGE },
+                                    REQUEST_WRITE_CODE );
+            }
+        }
+        return result;
+    }
+
+    private void launchPickerDialog()
+    {
+        if ( haveReadPermission() ) {
+            new FilePickDialogFragment( new FilePickDialogFragment.ItemSelProc() {
+                    @Override
+                    public void onItemSelected( String item ) {
+                        TextView view = (TextView)mParentView.findViewById(R.id.chosen_file);
+                        view.setText( item );
+                    }
+                } ).show( getFragmentManager(), "NoticeDialogFragment");
+        }
+    }
+
     public static class FilePickDialogFragment extends DialogFragment {
 
         interface ItemSelProc {
@@ -236,16 +279,22 @@ public class ClipFragment extends PageFragment
             final ListAdapter adapter = listFiles();
             // Use the Builder class for convenient dialog construction
             AlertDialog.Builder builder = new AlertDialog.Builder(getActivity());
-            builder
-                .setAdapter( adapter, new DialogInterface.OnClickListener() {
-                        @Override
-                        public void onClick( DialogInterface dialogInterface, int ii ) {
-                            String item = (String)adapter.getItem(ii);
-                            mProc.onItemSelected( item );
-                        }
-                    })
-                .setNegativeButton( android.R.string.cancel, null )
-                ;
+            if ( 0 == adapter.getCount() ) {
+                builder.setMessage( R.string.no_files_found )
+                    .setPositiveButton( android.R.string.ok, null )
+                    ;
+            } else {
+                builder
+                    .setAdapter( adapter, new DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick( DialogInterface dialogInterface, int ii ) {
+                                String item = (String)adapter.getItem(ii);
+                                mProc.onItemSelected( item );
+                            }
+                        })
+                    .setNegativeButton( android.R.string.cancel, null )
+                    ;
+            }
 
             return builder.create();
         }
@@ -299,7 +348,7 @@ public class ClipFragment extends PageFragment
                                       fileDescs );
             return adapter;
         }
-    }
+    } // class FilePickDialogFragment
 
     static File getFilesDir()
     {

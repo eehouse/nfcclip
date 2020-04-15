@@ -65,4 +65,8 @@
   <string name="file_send">Send file</string>
   <string name="file_choose">Choose file</string>
   <string name="no_file_hint">No file chosen</string>
+
+  <string name="no_files_found">No files found in Downloads
+  directory. It\'s empty, or the app doesn\'t have permission to read
+  there.</string>
 </resources>
