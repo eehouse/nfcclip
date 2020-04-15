@@ -126,8 +126,8 @@ class FileStore {
             } else {
                 Log.e( TAG, "checksum mismatch" );
             }
-        } catch (IOException e) {
-            e.printStackTrace();
+        } catch ( IOException ioe ) {
+            ioe.printStackTrace();
         }
 
         return result;
