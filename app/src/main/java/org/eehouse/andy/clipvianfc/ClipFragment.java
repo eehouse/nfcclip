@@ -112,7 +112,7 @@ public class ClipFragment extends PageFragment
             TextView tv = (TextView)mParentView.findViewById(R.id.chosen_file);
             String desc = tv.getText().toString();
             File file = FilePickDialogFragment.getForDesc( desc );
-            if ( false && null != file ) {
+            if ( null != file ) {
                 NFCUtils.sendFile( getActivity(), this, file );
             }
             break;
@@ -258,8 +258,7 @@ public class ClipFragment extends PageFragment
             if ( 2 <= parts.length ) {
                 String[] pathParts = Arrays.copyOfRange( parts, 0, parts.length - 1 );
                 String name = TextUtils.join(":", pathParts );
-                File dir = Environment.getExternalStorageDirectory();
-                dir = new File( dir, Environment.DIRECTORY_DOWNLOADS );
+                File dir = getFilesDir();
                 result = new File( dir, name );
                 Log.d( TAG, "getForDesc(%s) => %s", desc, result );
             }
@@ -278,15 +277,17 @@ public class ClipFragment extends PageFragment
         {
             List<String> fileList = new ArrayList<>();
             Log.d( TAG, "calling getExternalStorageDirectory()" );
-            File dir = Environment.getExternalStorageDirectory();
-            dir = new File( dir, Environment.DIRECTORY_DOWNLOADS );
+            File dir = getFilesDir();
             File[] files = dir.listFiles();
             if ( null == files ) {
                 Log.e( TAG, "got nothing from getExternalStorageDirectory()" );
             } else {
                 for ( File file : files ) {
                     if ( file.isFile() && file.canRead() ) {
-                        fileList.add( descForFile(file) );
+                        long len = file.length();
+                        if ( len <= Integer.MAX_VALUE ) {
+                            fileList.add( descForFile(file) );
+                        }
                     }
                 }
             }
@@ -298,6 +299,13 @@ public class ClipFragment extends PageFragment
                                       fileDescs );
             return adapter;
         }
+    }
+
+    static File getFilesDir()
+    {
+        File dir = Environment.getExternalStorageDirectory();
+        dir = new File( dir, Environment.DIRECTORY_DOWNLOADS );
+        return dir;
     }
 
 }

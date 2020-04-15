@@ -28,6 +28,8 @@ import android.content.Context;
 import android.content.Intent;
 import android.os.Build;
 
+import java.io.File;
+
 import androidx.core.app.NotificationCompat;
 
 class Notify {
@@ -55,6 +57,12 @@ class Notify {
 
         Notification notification = builder.build();
         nm.notify( R.string.channel_desc, notification );
+    }
+
+    static void post( Context context, File newFile )
+    {
+        String data = String.format( "new file named %s", newFile.getName() );
+        post( context, data );
     }
 
     private static String getChannelID( Context context, NotificationManager nm )

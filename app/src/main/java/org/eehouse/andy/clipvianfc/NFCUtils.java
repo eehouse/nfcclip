@@ -33,8 +33,11 @@ import java.io.DataInputStream;
 import java.io.DataOutput;
 import java.io.DataOutputStream;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 
+import java.io.RandomAccessFile;
+import java.io.FileNotFoundException;
 import java.math.BigInteger;
 import java.security.MessageDigest;
 import java.util.Arrays;
@@ -52,8 +55,9 @@ class NFCUtils {
 
     // On some devices getMaxTransceiveLength() reports a large number that
     // transceive() can't in fact deliver. We'll force a smaller number to be
-    // safe.
+    // safe. I've tried doubling this and it actually slows file transfer down!
     private static final int MY_MAX = 1024;
+
     private static final int HASH_LEN = 4;
 
     static final byte VERSION_1 = (byte)0x01;
@@ -102,33 +106,49 @@ class NFCUtils {
     static void sendFile( Activity activity, Callbacks callbacks, File file )
     {
         FileReader reader = new FileReader( activity, callbacks, file );
-        send( reader );
+        send( reader, callbacks );
     }
 
     static void sendClip( Activity activity, final Callbacks callbacks,
                           String mimeType, String label, ClipData.Item data )
     {
         ClipReader reader = new ClipReader( activity, callbacks, mimeType, label, data );
-        send( reader );
+        send( reader, callbacks );
     }
 
-    static void send( final Reader reader )
+    static void send( final Reader reader, final Callbacks callbacks )
     {
         synchronized( sReader ) {
             if ( null == sReader[0] ) {
-                reader.callbacks().onSendEnabled();
+                callbacks.onSendEnabled();
 
                 sReader[0] = reader;
                 NfcAdapter
                     .getDefaultAdapter( reader.activity() )
                     .enableReaderMode( reader.activity(), sReader[0], mFlags, null );
+
+                // Start a thread to detect 10 seconds of failure to
+                // connect. Each time we DO connect the timer's reset.
+
                 new Thread( new Runnable() {
                         @Override
                         public void run() {
-                            for ( int ii = 0; ii < 10; ++ii ) {
-                                reader.callbacks().onProgressMade( ii, 10 );
+                            int counter = 0;
+                            long lastConnect = 0;
+                            for ( ; ; ) {
+                                long curConnect = reader.getLastConnect();
+                                if ( curConnect > lastConnect ) {
+                                    lastConnect = curConnect;
+                                    counter = 0;
+                                } else {
+                                    if ( ++counter == 10 ) {
+                                        break; // outa here
+                                    }
+                                    callbacks.onProgressMade( counter, 10 );
+                                }
+
                                 try {
-                                    Thread.sleep(1 * 1000);
+                                    Thread.sleep( 1 * 1000 );
                                 } catch ( InterruptedException ie ) {
                                 }
                                 if ( reader.stopped() ) {
@@ -147,7 +167,8 @@ class NFCUtils {
         private NfcAdapter mAdapter;
         private boolean mSendSucceeded = false;
         private Callbacks mCallbacks;
-        private boolean mConnected;
+        private long mLastConnect;
+        int mNextPacket = -1;
         int mMaxPacketLen;
 
         private Reader( Activity activity, Callbacks callbacks )
@@ -160,10 +181,35 @@ class NFCUtils {
         Activity activity() { return mActivity; }
 
         abstract byte[] completeFirst( ByteArrayOutputStream baos );
-        abstract boolean processResponse( byte[] response );
-        abstract byte[] makeNext();
+        abstract int getTotalToSend();
 
-        boolean isSending() { return mConnected; }
+        long getLastConnect() { return mLastConnect; }
+
+        private void addBytesWithHash( ByteArrayOutputStream baos, byte[] bytes )
+        {
+            int hash = Arrays.hashCode( bytes );
+            try {
+                write( baos, hash );
+                baos.write( bytes );
+            } catch ( IOException ioe ) {
+            }
+        }
+
+        abstract void getBytesFrom( int offset, byte[] outbuf );
+
+        byte[] makeNext()
+        {
+            int offset = mMaxPacketLen * mNextPacket;
+            int totalLen = getTotalToSend();
+            int len = Math.min( mMaxPacketLen, totalLen - offset );
+            byte[] packet = new byte[len];
+
+            getBytesFrom( offset, packet );
+
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            addBytesWithHash( baos, packet );
+            return baos.toByteArray();
+        }
 
         @Override
         public void onTagDiscovered( Tag tag )
@@ -171,7 +217,7 @@ class NFCUtils {
             IsoDep isoDep = IsoDep.get( tag );
             try {
                 isoDep.connect();
-                mConnected = true;
+                mLastConnect = System.currentTimeMillis();
                 mMaxPacketLen = isoDep.getMaxTransceiveLength();
                 if ( MY_MAX < mMaxPacketLen ) {
                     mMaxPacketLen = MY_MAX;
@@ -194,6 +240,7 @@ class NFCUtils {
                         break;
                     }
                     out = makeNext();
+                    mLastConnect = System.currentTimeMillis();
                 }
 
                 isoDep.close();
@@ -202,7 +249,30 @@ class NFCUtils {
             } catch ( IOException ioe ) {
                 Log.e( TAG, "got ioe: " + ioe.getMessage() );
             }
-            mConnected = false;
+        }
+
+        private boolean processResponse( byte[] response )
+        {
+            boolean shouldContinue = false;
+            try {
+                ByteArrayInputStream bais = new ByteArrayInputStream( response );
+                byte[] status = new byte[NFCCardService.STATUS_SUCCESS.length];
+                bais.read( status );
+                shouldContinue =  Arrays.equals( status, NFCCardService.STATUS_SUCCESS );
+                if ( shouldContinue ) {
+                    int totalAvail = getTotalToSend();
+                    int totalReceived = readInt( bais );
+                    int nextPacket = readInt( bais );
+                    mNextPacket = nextPacket;
+                    shouldContinue = totalReceived < totalAvail;
+                    if ( shouldContinue ) {
+                        callbacks().onProgressMade( totalReceived, totalAvail );
+                    }
+                }
+            } catch ( IOException ioe ) {
+                Assert.fail();
+            }
+            return shouldContinue;
         }
 
         void stop()
@@ -231,7 +301,6 @@ class NFCUtils {
         private String mLabel;
         private ClipData.Item mData;
         private byte[] mDataBuf;   // the whole thing we want to send
-        private int mNextPacket = -1;
 
         private ClipReader( Activity activity, Callbacks callbacks, String mimeType, String label,
                             ClipData.Item data )
@@ -247,19 +316,14 @@ class NFCUtils {
         {
             byte[] result = null;
             try {
-                baos.write( CLIP );
-
                 ByteArrayOutputStream dataStream = new ByteArrayOutputStream();
                 write( dataStream, null == mType ? "" : mType );
                 write( dataStream, null == mLabel ? "" : mLabel );
                 write( dataStream, mData.coerceToText(activity()).toString() );
                 mDataBuf = dataStream.toByteArray();
 
-                write( baos, mDataBuf.length );
-                write( baos, mMaxPacketLen );
                 String sum = getMd5Sum( mDataBuf );
-                write( baos, sum );
-                Log.d( TAG, "completeFirst() wrote sum %s", sum );
+                MultiPartReceiver.writeHeader( baos, CLIP, mDataBuf.length, mMaxPacketLen, sum );
 
                 result = baos.toByteArray();
             } catch ( IOException ioe ) {
@@ -269,73 +333,58 @@ class NFCUtils {
         }
 
         @Override
-        boolean processResponse( byte[] response )
-        {
-            boolean shouldContinue = false;
-            try {
-                ByteArrayInputStream bais = new ByteArrayInputStream( response );
-                byte[] status = new byte[NFCCardService.STATUS_SUCCESS.length];
-                bais.read( status );
-                shouldContinue = Arrays.equals( status, NFCCardService.STATUS_SUCCESS );
-                if ( shouldContinue ) {
-                    int totalRead = readInt( bais );
-                    int nextPacket = readInt( bais );
-                    Log.d( TAG, "processResponse(): totalRead: %d; mNextPacket: %d; nextPacket: %d",
-                           totalRead, mNextPacket, nextPacket );
-                    Assert.assertTrue( nextPacket == (mNextPacket + 1) );
-                    mNextPacket = nextPacket;
-                    shouldContinue = totalRead < mDataBuf.length;
-                    if ( shouldContinue ) {
-                        callbacks().onProgressMade( totalRead, mDataBuf.length );
-                    }
-                }
-            } catch ( IOException ioe ) {
-                Assert.fail();
-            }
-            return shouldContinue;
-        }
+        int getTotalToSend() { return mDataBuf.length; }
 
         @Override
-        byte[] makeNext()
+        void getBytesFrom( int offset, byte[] outbuf )
         {
-            int offset = mMaxPacketLen * mNextPacket;
-            int len = Math.min( mMaxPacketLen, mDataBuf.length - offset );
-            byte[] data = new byte[len];
-            System.arraycopy( mDataBuf, offset, data, 0, len );
-            int hash = Arrays.hashCode( data );
-
-            byte[] result = null;
-            try {
-                ByteArrayOutputStream baos = new ByteArrayOutputStream();
-                int posBefore = baos.size();
-                write( baos, hash );
-                int posAfter = baos.size();
-                Assert.assertTrue( HASH_LEN == posAfter - posBefore );
-                baos.write( data );
-                result = baos.toByteArray();
-            } catch ( IOException ioe ) {
-                Assert.fail();
-            }
-            return result;
+            System.arraycopy( mDataBuf, offset, outbuf, 0, outbuf.length );
         }
-    }
+    } // class ClipReader
 
     private static class FileReader extends Reader {
         private File mFile;
+        private String mSum;
         private FileReader( Activity activity, Callbacks callbacks, File file )
         {
             super( activity, callbacks );
             mFile = file;
+            mSum = getMd5Sum( mFile );
         }
 
         @Override
-        byte[] makeNext() { return null; }
-        @Override
-        byte[] completeFirst( ByteArrayOutputStream baos ) { return null; }
-        @Override
-        boolean processResponse( byte[] response ) { return false; }
+        int getTotalToSend() { return (int)mFile.length(); }
 
-    }
+        @Override
+        void getBytesFrom( int offset, byte[] outbuf )
+        {
+            try {
+                RandomAccessFile raf = new RandomAccessFile( mFile, "r" );
+                raf.seek( offset );
+                raf.readFully( outbuf );
+            } catch ( IOException fnf ) {
+                Assert.fail();
+            }
+        }
+
+        @Override
+        byte[] completeFirst( ByteArrayOutputStream baos )
+        {
+            byte[] result = null;
+            try {
+                MultiPartReceiver.writeHeader( baos, FILE, (int)mFile.length(),
+                                               mMaxPacketLen, mSum );
+                
+                write( baos, mFile.getName() );
+
+                result = baos.toByteArray();
+            } catch ( IOException ioe ) {
+                Assert.fail();
+            }
+            Log.d( TAG, "completeFirst() => %s", hexDump( result ) );
+            return result;
+        }
+    } // class FileReader
 
     private static final String HEX_CHARS = "0123456789ABCDEF";
     static byte[] hexStr2ba( String data )
@@ -382,6 +431,13 @@ class NFCUtils {
         dos.flush();
     }
 
+    static void write( ByteArrayOutputStream stream, long val ) throws IOException
+    {
+        DataOutputStream dos = new DataOutputStream(stream);
+        dos.writeLong( val );
+        dos.flush();
+    }
+
     static String readString( ByteArrayInputStream stream ) throws IOException
     {
         DataInputStream dis = new DataInputStream(stream);
@@ -392,6 +448,12 @@ class NFCUtils {
     {
         DataInputStream dis = new DataInputStream(stream);
         return dis.readInt();
+    }
+
+    static long readLong( ByteArrayInputStream stream ) throws IOException
+    {
+        DataInputStream dis = new DataInputStream(stream);
+        return dis.readLong();
     }
 
     abstract static class Receiver {
@@ -405,6 +467,7 @@ class NFCUtils {
         int mMaxPacketLen;
         int mPacketCount;       // how many packets will it take?
         String mSum;
+        int mNextPacket;
 
         MultiPartReceiver( Context context, ByteArrayInputStream bais )
         {
@@ -421,8 +484,72 @@ class NFCUtils {
             }
         }
 
+        abstract void writeRequest( ByteArrayOutputStream baos ) throws IOException;
         Context context() { return mContext; }
-    }
+
+        @Override
+        byte[] receiveFirst()
+        {
+            Log.d( TAG, "receiveFirst()" );
+            byte[] result = null;
+            try {
+                // Called after the initial packet checks out. We need to write
+                // back what we want/need
+                ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                baos.write( NFCCardService.STATUS_SUCCESS );
+                writeRequest( baos );
+                result = baos.toByteArray();
+            } catch ( IOException ioe ) {
+                Assert.fail();
+            }
+            return result;
+        }
+
+        abstract void store( int packetNo, byte[] packet ) throws IOException;
+        abstract void checkFinished();
+
+        @Override
+        byte[] receive( byte[] apdu )
+        {
+            byte[] result = null;
+            try {
+                ByteArrayInputStream bais = new ByteArrayInputStream( apdu );
+                int hash = readInt( bais );
+                byte[] rest = new byte[bais.available()];
+                bais.read( rest );
+                int restHash = Arrays.hashCode( rest );
+
+                ByteArrayOutputStream response = new ByteArrayOutputStream();
+            
+                if ( restHash == hash ) {
+                    store( mNextPacket, rest );
+                    // mBuffer.write( rest );
+                    checkFinished();
+
+                    response.write( NFCCardService.STATUS_SUCCESS );
+                    writeRequest( response );
+                } else {
+                    Log.e( TAG, "checksums don't match; bailing" );
+                    response.write( NFCCardService.STATUS_FAILED );
+                }
+
+                result = response.toByteArray();
+            } catch ( IOException ioe ) {
+                Assert.fail();
+            }
+            return result;
+        }
+
+        private static void writeHeader( ByteArrayOutputStream baos, byte cmd,
+                                         int fullLen, int maxPacketLen, String sum )
+            throws IOException
+        {
+            baos.write( cmd );
+            write( baos, fullLen );
+            write( baos, maxPacketLen );
+            write( baos, sum );
+        }
+    } // pclass MultiPartReceiver
 
     // We'll keep clip data in memory. We still recover from a partial
     // transmission as long as the app isn't restarted
@@ -456,65 +583,24 @@ class NFCUtils {
         }
 
         @Override
-        byte[] receiveFirst()
-        {
-            Log.d( TAG, "receiveFirst()" );
-            byte[] result = null;
-            try {
-                // Called after the initial packet checks out. We need to write
-                // back what we want/need
-                ByteArrayOutputStream baos = new ByteArrayOutputStream();
-                baos.write( NFCCardService.STATUS_SUCCESS );
-                writeRequest( baos );
-                result = baos.toByteArray();
-            } catch ( IOException ioe ) {
-                Assert.fail();
-            }
-            return result;
-        }
-
-        private void writeRequest( ByteArrayOutputStream baos ) throws IOException
+        void writeRequest( ByteArrayOutputStream baos ) throws IOException
         {
             int curPacketCount = mBuffer.size() / mMaxPacketLen;
             write( baos, mBuffer.size() );
+            mNextPacket = curPacketCount;
             write( baos, curPacketCount );
             Log.d( TAG, "writeRequest(): asking for packet %d (of %d)", curPacketCount, mPacketCount );
         }
 
         @Override
-        byte[] receive( byte[] apdu )
+        void store( int packetNo, byte[] packet ) throws IOException
         {
-            Log.d( TAG, "receive()" );
-            byte[] result = null;
-            try {
-                ByteArrayInputStream bais = new ByteArrayInputStream( apdu );
-                int sum = readInt( bais );
-                byte[] rest = new byte[bais.available()];
-                bais.read( rest );
-                int restSum = Arrays.hashCode( rest );
-
-                ByteArrayOutputStream response = new ByteArrayOutputStream();
-            
-                if ( restSum == sum ) {
-                    mBuffer.write( rest );
-                    Log.d( TAG, "receive(); now have %d of %d bytes", mBuffer.size(), mEventualSize );
-                    checkFinished();
-
-                    response.write( NFCCardService.STATUS_SUCCESS );
-                    writeRequest( response );
-                } else {
-                    Log.e( TAG, "checksums don't match; bailing" );
-                    response.write( NFCCardService.STATUS_FAILED );
-                }
-
-                result = response.toByteArray();
-            } catch ( IOException ioe ) {
-                Assert.fail();
-            }
-            return result;
+            Assert.assertTrue( packetNo == mNextPacket );
+            mBuffer.write( packet );
         }
 
-        private void checkFinished()
+        @Override
+        void checkFinished()
         {
             Assert.assertTrue( mBuffer.size() <= mEventualSize );
             if ( mBuffer.size() == mEventualSize ) {
@@ -553,26 +639,58 @@ class NFCUtils {
     }
 
     static class FileReceiver extends MultiPartReceiver {
+        private FileStore mFileStore;
+        private String mFileName;
+
         private FileReceiver( Context context, ByteArrayInputStream bais )
         {
             super( context, bais );
+            try {
+                mFileName = readString( bais );
+            } catch ( IOException ioe ) {
+                Assert.fail();
+            }
+            Log.d( TAG, "read file name: %s", mFileName );
         }
 
         @Override
         byte[] receiveFirst()
         {
-            return null;
+            mFileStore = FileStore.getFor( mSum, mFileName, mMaxPacketLen, mEventualSize );
+            return super.receiveFirst();
         }
 
         @Override
-        byte[] receive( byte[] apdu )
+        void writeRequest( ByteArrayOutputStream baos ) throws IOException
         {
-            return null;
+            write( baos, mFileStore.getNBytesReceived() );
+            mNextPacket = mFileStore.getNextPacketSought() ;
+            write( baos, mNextPacket );
+        }
+
+        @Override
+        void store( int packetNo, byte[] packet ) throws IOException
+        {
+            mFileStore.store( packetNo, packet );
+        }
+
+        @Override
+        void checkFinished()
+        {
+            Assert.assertTrue( mFileStore.getNBytesReceived() <= mEventualSize );
+            if ( mFileStore.getNBytesReceived() == mEventualSize ) {
+                File savedFile = mFileStore.writeFileWithSumCheck();
+                if ( null != savedFile ) {
+                    Log.d( TAG, "file checksums match! We got it!!!" );
+                    Notify.post( context(), savedFile );
+                }
+            }
         }
     }
 
     static Receiver makeReceiver( Context context, byte[] apdu ) throws Exception
     {
+        Log.d( TAG, "makeReceiver(%s)", hexDump(apdu) );
         Receiver result = null;
         ByteArrayInputStream bais = new ByteArrayInputStream( apdu );
         byte[] header = new byte[NFCUtils.HEADER.length];
@@ -608,7 +726,31 @@ class NFCUtils {
         return result;
     }
 
-    // adapter from:
+    static String getMd5Sum( File input )
+    {
+        String result = null;
+        try {
+            FileInputStream fis =  new FileInputStream( input );
+            MessageDigest digest = MessageDigest.getInstance("MD5");
+
+            byte[] buffer = new byte[1024];
+            for ( ; ; ) {
+                int numRead = fis.read( buffer );
+                if ( numRead < 0 ) {
+                    break;
+                }
+                digest.update( buffer, 0, numRead );
+            }
+
+            fis.close();
+            result = digestToStr( digest.digest() );
+        } catch ( IOException | java.security.NoSuchAlgorithmException ioe ) {
+            Log.e( TAG, "processBuffer(): exception: " + ioe );
+        }
+        return result;
+    }
+
+    // adapted from:
     // https://stackoverflow.com/questions/4846484/md5-hashing-in-android
     static String getMd5Sum( byte[] input )
     {

@@ -27,9 +27,10 @@ class Assert {
     public static void assertTrue( boolean val )
     {
         if ( BuildConfig.DEBUG && !val ) {
-            Log.e( TAG, "firing assert!" );
-            throw new RuntimeException();
+            RuntimeException rex = new RuntimeException();
+            String stackTrace = android.util.Log.getStackTraceString(rex);
+            Log.e( TAG, "firing assert!: %s", stackTrace );
+            throw rex;
         }
     }
-
 }
