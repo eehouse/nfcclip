@@ -69,4 +69,7 @@
   <string name="no_files_found">No files found in Downloads
   directory. It\'s empty, or the app doesn\'t have permission to read
   there.</string>
+
+  <string name="notify_gotfile_title">File received</string>
+  <string name="notify_gotfile_body_fmt">Tap to save %1$s</string>
 </resources>

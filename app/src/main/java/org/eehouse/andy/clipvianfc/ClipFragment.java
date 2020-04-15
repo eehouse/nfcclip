@@ -58,7 +58,6 @@ public class ClipFragment extends PageFragment
                NFCUtils.Callbacks {
     private static final String TAG = ClipFragment.class.getSimpleName();
     private static final int REQUEST_WRITE_CODE = 38278;
-    private static final String WRITE_EXTERNAL_STORAGE = Manifest.permission.WRITE_EXTERNAL_STORAGE;
     private View mParentView;
     private ClipData.Item mClipData;
     private String[] mType = {null};
@@ -135,14 +134,9 @@ public class ClipFragment extends PageFragment
                                             @NonNull int[] grantResults )
     {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        if ( requestCode == REQUEST_WRITE_CODE ) {
-            for ( int ii = 0; ii < permissions.length; ++ii ) {
-                if ( permissions[ii].equals(WRITE_EXTERNAL_STORAGE) &&
-                     PackageManager.PERMISSION_GRANTED == grantResults[ii] ) {
-                    launchPickerDialog();
-                    break;
-                }
-            }
+        if ( requestCode == REQUEST_WRITE_CODE
+             && MainActivity.haveWritePerm( permissions, grantResults )) {
+            launchPickerDialog();
         }
     }
 
@@ -237,11 +231,10 @@ public class ClipFragment extends PageFragment
         boolean result = false;
         Activity activity = getActivity();
         if ( null != activity ) {
-            result = ContextCompat.checkSelfPermission( activity, WRITE_EXTERNAL_STORAGE)
+            result = ContextCompat.checkSelfPermission( activity, MainActivity.PERMS_ARR[0] )
                 == PackageManager.PERMISSION_GRANTED;
             if ( !result ) {
-                requestPermissions( new String[] { WRITE_EXTERNAL_STORAGE },
-                                    REQUEST_WRITE_CODE );
+                requestPermissions( MainActivity.PERMS_ARR, REQUEST_WRITE_CODE );
             }
         }
         return result;

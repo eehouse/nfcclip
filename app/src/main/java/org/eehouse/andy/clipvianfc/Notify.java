@@ -59,10 +59,26 @@ class Notify {
         nm.notify( R.string.channel_desc, notification );
     }
 
-    static void post( Context context, File newFile )
+    static void postGotFile( Context context, String name, String sum )
     {
-        String data = String.format( "new file named %s", newFile.getName() );
-        post( context, data );
+        NotificationManager nm = (NotificationManager)
+            context.getSystemService( Context.NOTIFICATION_SERVICE );
+        String channelID  = getChannelID( context, nm );
+
+        Intent intent = MainActivity.getGotFileIntent( context, name, sum );
+        PendingIntent pi = getPendingIntent( context, intent );
+
+        NotificationCompat.Builder builder =
+            new NotificationCompat.Builder( context, channelID )
+            .setContentIntent( pi )
+            .setSmallIcon( R.drawable.ic_launcher_background )
+            .setAutoCancel( true )
+            .setContentTitle( context.getString(R.string.notify_gotfile_title) )
+            .setContentText( context.getString( R.string.notify_gotfile_body_fmt, name ) );
+            ;
+
+        Notification notification = builder.build();
+        nm.notify( R.string.notify_gotfile_title, notification );
     }
 
     private static String getChannelID( Context context, NotificationManager nm )

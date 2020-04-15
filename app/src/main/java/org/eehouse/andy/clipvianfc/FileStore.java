@@ -1,4 +1,4 @@
-/* -*- compile-command: "find-and-gradle.sh inDeb"; -*- */
+/* -*- compile-command: "find-and-gradle.sh inFossDeb"; -*- */
 /*
  * Copyright 2020 by Eric House (xwords@eehouse.org).  All rights reserved.
  *
@@ -19,39 +19,78 @@
 
 package org.eehouse.andy.clipvianfc;
 
+import android.content.Context;
+
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.RandomAccessFile;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.Map;
 
 class FileStore {
     private static final String TAG = FileStore.class.getSimpleName();
     private String mSum;
+    private File mTmpFile;
+    private RandomAccessFile mRaf;
     private String mName;
-    private Map<Integer, byte[]> mData = new HashMap<>();
     private int mNBytesStored;
     private int mNextPacket = -1;
     private int mPacketsExpected;
     private int mMaxPacketLen;
     private int mEventualSize;
 
-    private static Map<String, FileStore> sStoresMap = new HashMap<>();
-
-    static FileStore getFor( String sum, String name, int maxPacketLen, int eventualSize )
+    static FileStore getFor( Context context, String sum, String name,
+                             int maxPacketLen, int eventualSize )
     {
-        FileStore result;
-        synchronized ( sStoresMap ) {
-            if ( ! sStoresMap.containsKey( sum ) ) {
-                sStoresMap.put( sum, new FileStore( sum, name, maxPacketLen, eventualSize ) );
-            }
-            result = sStoresMap.get( sum );
-        }
+        File dir = context.getCacheDir();
+        FileStore result = new FileStore( dir, sum, name, maxPacketLen, eventualSize );
         return result;
     }
 
-    private FileStore( String sum, String name, int maxPacketLen, int eventualSize )
+    static void writeFileTo( Context context, File dir, String name, String sum )
     {
+        File destFile = new File( dir, name );
+        File srcDir = context.getCacheDir();
+        File srcFile = new File( srcDir, sum );
+
+        try {
+            destFile.createNewFile();
+            FileInputStream fis = new FileInputStream( srcFile );
+            FileOutputStream fos = new FileOutputStream( destFile );
+            byte[] buffer = new byte[2048];
+            for ( ; ; ) {
+                int nRead = fis.read(buffer);
+                if (nRead < 0) {
+                    break;
+                }
+                fos.write( buffer);
+            }
+            srcFile.delete();
+        } catch ( IOException ioe ) {
+            ioe.printStackTrace();
+            Assert.fail();
+        }
+    }
+
+    private FileStore( File dir, String sum, String name, int maxPacketLen, int eventualSize )
+    {
+        mTmpFile = new File( dir, sum );
+        try {
+            if ( ! mTmpFile.exists() ) {
+                mTmpFile.createNewFile();
+            } else {
+                Log.d( TAG, "file exists; size: %d", mTmpFile.length() );
+            }
+            mRaf = new RandomAccessFile( mTmpFile, "rw" );
+        } catch ( IOException ioe ) {
+            Assert.fail();
+        }
+        mNBytesStored = (int)mTmpFile.length();
         mSum = sum;
         mName = name;
         mMaxPacketLen = maxPacketLen;
@@ -61,73 +100,39 @@ class FileStore {
 
     int getNBytesReceived()
     {
+        Assert.assertTrue( mNBytesStored >= 0 );
         return mNBytesStored;
     }
 
     int getNextPacketSought()
     {
-        int result = mNextPacket;
-        for ( int ii = 0; -1 == result && ii < mPacketsExpected; ++ii ) {
-            if ( ! mData.containsKey( ii ) ) {
-                result = ii;
-            }
-        }
+        int result = mNBytesStored / mMaxPacketLen;
         Log.d( TAG, "getNextPacketSought() => %d", result );
+        Assert.assertTrue( result >= 0 );
         return result;
     }
 
     void store( int packetNo, byte[] packet )
     {
         Log.d( TAG, "store(packetNo=%d)", packetNo );
-        if ( ! mData.containsKey( packetNo ) ) {
-            mData.put( packetNo, packet );
+        try {
+            mRaf.seek( packetNo * mMaxPacketLen );
+            mRaf.write( packet );
             mNBytesStored += packet.length;
-
-            int nextPacket = packetNo + 1;
-            if ( ! mData.containsKey( nextPacket ) ) {
-                mNextPacket = nextPacket;
-            } else {
-                mNextPacket = -1;
-            }
-        } else {
-            Log.e( TAG, "duplicate packet %d???", packetNo );
+        } catch ( IOException ioe ) {
+            Assert.fail();
         }
+        Assert.assertTrue( mNBytesStored == (int)mTmpFile.length() );
     }
 
-    File writeFileWithSumCheck()
+    boolean checkSum()
     {
-        File result = null;
-        Assert.assertTrue( mNBytesStored == mEventualSize );
-
-        File dir = ClipFragment.getFilesDir();
-
-        String name = mName;
-        File file;
-        for ( ; ; ) {
-            file = new File( dir, name );
-            if ( ! file.exists() ) {
-                break;
-            }
-            name = "x" + name;
-        }
-
-        try {
-            file.createNewFile();
-            FileOutputStream fos = new FileOutputStream( file );
-            for ( int ii = 0; ii < mPacketsExpected; ++ii ) {
-                byte[] bytes = mData.get( ii );
-                fos.write( bytes );
-            }
-
-            String sum = NFCUtils.getMd5Sum( file );
-            if ( sum.equals( mSum ) ) {
-                Log.d( TAG, "sums check out!!!" );
-                result = file;
-            } else {
-                Log.e( TAG, "checksum mismatch" );
-            }
-        } catch ( IOException ioe ) {
-            ioe.printStackTrace();
+        String sum = NFCUtils.getMd5Sum( mTmpFile );
+        boolean result = sum.equals( mSum );
+        if ( result ) {
+            Log.d( TAG, "sums check out!!!" );
+        } else {
+            Log.e( TAG, "checksum mismatch" );
         }
 
         return result;

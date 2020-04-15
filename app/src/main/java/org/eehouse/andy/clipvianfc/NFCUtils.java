@@ -64,7 +64,7 @@ class NFCUtils {
     static private final int mFlags = NfcAdapter.FLAG_READER_NFC_A
         | NfcAdapter.FLAG_READER_SKIP_NDEF_CHECK;
     static final byte[] HEADER = { 0x00, (byte)0xA4, 0x04, 0x00 };
-    private static Reader[] sReader = {null};
+    private static Sender[] sSender = {null};
 
     static final byte CLIP = 0x02; // whatever. Just not 0 and 1
     static final byte FILE = 0x03;
@@ -105,27 +105,27 @@ class NFCUtils {
     // and we need to start over?
     static void sendFile( Activity activity, Callbacks callbacks, File file )
     {
-        FileReader reader = new FileReader( activity, callbacks, file );
+        FileSender reader = new FileSender( activity, callbacks, file );
         send( reader, callbacks );
     }
 
     static void sendClip( Activity activity, final Callbacks callbacks,
                           String mimeType, String label, ClipData.Item data )
     {
-        ClipReader reader = new ClipReader( activity, callbacks, mimeType, label, data );
+        ClipSender reader = new ClipSender( activity, callbacks, mimeType, label, data );
         send( reader, callbacks );
     }
 
-    static void send( final Reader reader, final Callbacks callbacks )
+    static void send( final Sender reader, final Callbacks callbacks )
     {
-        synchronized( sReader ) {
-            if ( null == sReader[0] ) {
+        synchronized( sSender ) {
+            if ( null == sSender[0] ) {
                 callbacks.onSendEnabled();
 
-                sReader[0] = reader;
+                sSender[0] = reader;
                 NfcAdapter
                     .getDefaultAdapter( reader.activity() )
-                    .enableReaderMode( reader.activity(), sReader[0], mFlags, null );
+                    .enableReaderMode( reader.activity(), sSender[0], mFlags, null );
 
                 // Start a thread to detect 10 seconds of failure to
                 // connect. Each time we DO connect the timer's reset.
@@ -162,7 +162,7 @@ class NFCUtils {
         }
     }
 
-    abstract static class Reader implements NfcAdapter.ReaderCallback {
+    abstract static class Sender implements NfcAdapter.ReaderCallback {
         private Activity mActivity;
         private NfcAdapter mAdapter;
         private boolean mSendSucceeded = false;
@@ -171,7 +171,7 @@ class NFCUtils {
         int mNextPacket = -1;
         int mMaxPacketLen;
 
-        private Reader( Activity activity, Callbacks callbacks )
+        private Sender( Activity activity, Callbacks callbacks )
         {
             mActivity = activity;
             mCallbacks = callbacks;
@@ -258,7 +258,7 @@ class NFCUtils {
                 ByteArrayInputStream bais = new ByteArrayInputStream( response );
                 byte[] status = new byte[NFCCardService.STATUS_SUCCESS.length];
                 bais.read( status );
-                shouldContinue =  Arrays.equals( status, NFCCardService.STATUS_SUCCESS );
+                shouldContinue = Arrays.equals( status, NFCCardService.STATUS_SUCCESS );
                 if ( shouldContinue ) {
                     int totalAvail = getTotalToSend();
                     int totalReceived = readInt( bais );
@@ -270,6 +270,7 @@ class NFCUtils {
                     }
                 }
             } catch ( IOException ioe ) {
+                Log.e( TAG, "processResponse: ioe: %s", ioe );
                 Assert.fail();
             }
             return shouldContinue;
@@ -277,38 +278,39 @@ class NFCUtils {
 
         void stop()
         {
-            synchronized( sReader ) {
-                if ( this == sReader[0] ) {
+            synchronized( sSender ) {
+                if ( this == sSender[0] ) {
                     NfcAdapter
                         .getDefaultAdapter( mActivity )
                         .disableReaderMode( mActivity );
                     mCallbacks.onSendComplete( mSendSucceeded );
-                    sReader[0] = null;
+                    sSender[0] = null;
                 }
             }
         }
 
         boolean stopped()
         {
-            synchronized ( sReader ) {
-                return sReader[0] != this;
+            synchronized ( sSender ) {
+                return sSender[0] != this;
             }
         }
     }
 
-    private static class ClipReader extends Reader {
+    private static class ClipSender extends Sender {
         private String mType;
         private String mLabel;
         private ClipData.Item mData;
         private byte[] mDataBuf;   // the whole thing we want to send
 
-        private ClipReader( Activity activity, Callbacks callbacks, String mimeType, String label,
+        private ClipSender( Activity activity, Callbacks callbacks, String mimeType, String label,
                             ClipData.Item data )
         {
             super( activity, callbacks );
             mType = mimeType;
             mLabel = label;
             mData = data;
+            mNextPacket = -1;
         }
 
         @Override
@@ -340,12 +342,12 @@ class NFCUtils {
         {
             System.arraycopy( mDataBuf, offset, outbuf, 0, outbuf.length );
         }
-    } // class ClipReader
+    } // class ClipSender
 
-    private static class FileReader extends Reader {
+    private static class FileSender extends Sender {
         private File mFile;
         private String mSum;
-        private FileReader( Activity activity, Callbacks callbacks, File file )
+        private FileSender( Activity activity, Callbacks callbacks, File file )
         {
             super( activity, callbacks );
             mFile = file;
@@ -381,10 +383,10 @@ class NFCUtils {
             } catch ( IOException ioe ) {
                 Assert.fail();
             }
-            Log.d( TAG, "completeFirst() => %s", hexDump( result ) );
+            // Log.d( TAG, "completeFirst() => %s", hexDump( result ) );
             return result;
         }
-    } // class FileReader
+    } // class FileSender
 
     private static final String HEX_CHARS = "0123456789ABCDEF";
     static byte[] hexStr2ba( String data )
@@ -426,6 +428,7 @@ class NFCUtils {
 
     static void write( ByteArrayOutputStream stream, int val ) throws IOException
     {
+        // Log.d( TAG, "write(int=%d)", val );
         DataOutputStream dos = new DataOutputStream(stream);
         dos.writeInt( val );
         dos.flush();
@@ -447,7 +450,9 @@ class NFCUtils {
     static int readInt( ByteArrayInputStream stream ) throws IOException
     {
         DataInputStream dis = new DataInputStream(stream);
-        return dis.readInt();
+        int result = dis.readInt();
+        // Log.d( TAG, "readInt() => %d", result );
+        return result;
     }
 
     static long readLong( ByteArrayInputStream stream ) throws IOException
@@ -493,6 +498,8 @@ class NFCUtils {
             Log.d( TAG, "receiveFirst()" );
             byte[] result = null;
             try {
+                checkFinished();
+
                 // Called after the initial packet checks out. We need to write
                 // back what we want/need
                 ByteArrayOutputStream baos = new ByteArrayOutputStream();
@@ -656,7 +663,8 @@ class NFCUtils {
         @Override
         byte[] receiveFirst()
         {
-            mFileStore = FileStore.getFor( mSum, mFileName, mMaxPacketLen, mEventualSize );
+            mFileStore = FileStore.getFor( context(), mSum, mFileName,
+                                           mMaxPacketLen, mEventualSize );
             return super.receiveFirst();
         }
 
@@ -665,6 +673,8 @@ class NFCUtils {
         {
             write( baos, mFileStore.getNBytesReceived() );
             mNextPacket = mFileStore.getNextPacketSought() ;
+            // Log.d( TAG, "writeRequest(): mNextPacket now %d", mNextPacket );
+            Assert.assertTrue( mNextPacket >= 0 );
             write( baos, mNextPacket );
         }
 
@@ -679,10 +689,9 @@ class NFCUtils {
         {
             Assert.assertTrue( mFileStore.getNBytesReceived() <= mEventualSize );
             if ( mFileStore.getNBytesReceived() == mEventualSize ) {
-                File savedFile = mFileStore.writeFileWithSumCheck();
-                if ( null != savedFile ) {
+                if ( mFileStore.checkSum() ) {
                     Log.d( TAG, "file checksums match! We got it!!!" );
-                    Notify.post( context(), savedFile );
+                    Notify.postGotFile( context(), mFileName, mSum );
                 }
             }
         }
@@ -690,7 +699,7 @@ class NFCUtils {
 
     static Receiver makeReceiver( Context context, byte[] apdu ) throws Exception
     {
-        Log.d( TAG, "makeReceiver(%s)", hexDump(apdu) );
+        // Log.d( TAG, "makeReceiver(%s)", hexDump(apdu) );
         Receiver result = null;
         ByteArrayInputStream bais = new ByteArrayInputStream( apdu );
         byte[] header = new byte[NFCUtils.HEADER.length];
