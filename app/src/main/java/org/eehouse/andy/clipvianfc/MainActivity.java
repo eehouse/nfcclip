@@ -31,6 +31,7 @@ import android.view.View;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 import androidx.viewpager.widget.ViewPager;
@@ -135,7 +136,7 @@ public class MainActivity extends AppCompatActivity {
         boolean needIt = ContextCompat.checkSelfPermission( this, PERMS_ARR[0] )
             != PackageManager.PERMISSION_GRANTED;
         if ( needIt ) {
-            requestPermissions( PERMS_ARR, REQUEST_WRITE_CODE );
+            ActivityCompat.requestPermissions( this, PERMS_ARR, REQUEST_WRITE_CODE );
         }
         return needIt;
     }
